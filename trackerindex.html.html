@@ -1,0 +1,3424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FITTRACK – Personal Gym & Muscle Building Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              primary: '#155EEF',
+              secondary: '#2970FF',
+              light: '#EAF1FF',
+              bg: '#F5F8FC',
+              card: '#FFFFFF',
+              text: '#172B4D',
+              muted: '#667085',
+              success: '#12B76A',
+              warning: '#F79009',
+              danger: '#F04438',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #F5F8FC;
+      color: #172B4D;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #D0D5DD; border-radius: 9999px; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Card & Interactive styles */
+    .ft-card {
+      background: #FFFFFF;
+      border: 1px solid #EAECF0;
+      border-radius: 12px;
+      box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+    }
+    .ft-input {
+      border: 1px solid #D0D5DD;
+      border-radius: 8px;
+      background: #FFFFFF;
+      color: #172B4D;
+      font-weight: 600;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ft-input:focus {
+      outline: none;
+      border-color: #155EEF;
+      box-shadow: 0 0 0 3px #EAF1FF;
+    }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] { -moz-appearance: textfield; }
+  </style>
+</head>
+<body class="bg-[#F5F8FC] text-[#172B4D] antialiased selection:bg-[#EAF1FF] selection:text-[#155EEF]">
+
+  <!-- Main App Shell -->
+  <div class="min-h-screen flex flex-col lg:flex-row">
+    
+    <!-- Desktop Left Sidebar -->
+    <aside class="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-30">
+      <div class="flex items-center gap-3 px-6 h-16 border-b border-gray-100">
+        <div class="w-9 h-9 rounded-xl bg-[#155EEF] flex items-center justify-center text-white shadow-sm">
+          <i data-lucide="dumbbell" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-lg tracking-tight text-[#172B4D]">FITTRACK</span>
+          <span class="block text-[10px] font-semibold uppercase tracking-wider text-[#155EEF]">Hypertrophy OS</span>
+        </div>
+      </div>
+
+      <nav class="flex-1 px-3 py-5 space-y-1 overflow-y-auto" id="desktop-nav">
+        <!-- Populated by JS -->
+      </nav>
+
+      <!-- Desktop Active Session / Timer Mini Widget -->
+      <div class="p-4 border-t border-gray-100 space-y-3">
+        <div id="sidebar-timer-widget" class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-[#667085] flex items-center gap-1.5">
+              <i data-lucide="timer" class="w-3.5 h-3.5 text-[#155EEF]"></i> Rest Timer
+            </span>
+            <span id="sidebar-timer-display" class="text-sm font-bold text-[#172B4D] tabular-nums">01:30</span>
+          </div>
+          <div class="flex gap-1.5 mt-2">
+            <button onclick="App.toggleRestTimer()" id="sidebar-timer-btn" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-[#155EEF] text-white hover:bg-[#2970FF] transition">Start</button>
+            <button onclick="App.resetRestTimer()" class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white border border-gray-200 text-[#667085] hover:text-[#172B4D]">Reset</button>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 px-2 py-1">
+          <div class="w-9 h-9 rounded-full bg-[#EAF1FF] text-[#155EEF] font-bold text-sm flex items-center justify-center border border-[#155EEF]/20">
+            54
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-bold text-[#172B4D] truncate">Athlete (54 kg)</p>
+            <p class="text-[11px] text-[#667085] truncate">6-Day PPL • Mass Gain</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 lg:pl-64 flex flex-col min-h-screen pb-24 lg:pb-10">
+      
+      <!-- Sticky Top Bar (Mobile + Desktop) -->
+      <header class="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-200/80 px-4 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-2.5 lg:hidden">
+          <div class="w-8 h-8 rounded-lg bg-[#155EEF] flex items-center justify-center text-white">
+            <i data-lucide="dumbbell" class="w-4 h-4"></i>
+          </div>
+          <span class="font-extrabold text-base tracking-tight text-[#172B4D]">FITTRACK</span>
+        </div>
+
+        <div class="hidden lg:flex items-center gap-3">
+          <span id="header-phase-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#EAF1FF] text-[#155EEF]">
+            <span class="w-1.5 h-1.5 rounded-full bg-[#155EEF]"></span>
+            Phase 1: Custom Transition Week
+          </span>
+          <span id="header-date-desktop" class="text-xs font-medium text-[#667085]"></span>
+        </div>
+
+        <!-- Global Floating Rest Timer Pill & Quick Controls -->
+        <div class="flex items-center gap-2">
+          <!-- Active Workout Banner Pill if running -->
+          <button id="header-active-session-pill" onclick="App.navigate('workout')" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#12B76A]/10 text-[#12B76A] border border-[#12B76A]/30 text-xs font-bold">
+            <span class="w-2 h-2 rounded-full bg-[#12B76A] animate-pulse"></span>
+            <span id="header-session-clock">00:00</span>
+          </button>
+
+          <!-- Rest Timer Trigger -->
+          <button onclick="App.openTimerModal()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#F5F8FC] hover:bg-[#EAF1FF] border border-gray-200 text-xs font-bold text-[#172B4D] transition">
+            <i data-lucide="timer" class="w-3.5 h-3.5 text-[#155EEF]"></i>
+            <span id="header-timer-text" class="tabular-nums">01:30</span>
+          </button>
+
+          <!-- Profile Shortcut -->
+          <button onclick="App.navigate('profile')" class="w-8 h-8 rounded-full bg-[#EAF1FF] text-[#155EEF] font-bold text-xs flex items-center justify-center border border-[#155EEF]/20">
+            <i data-lucide="user" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic View Container -->
+      <main id="app-main" class="flex-1 max-w-5xl w-full mx-auto px-4 lg:px-8 pt-5 space-y-5">
+        <!-- Rendered dynamically by JS -->
+      </main>
+
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar (5 Items) -->
+    <nav class="lg:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-200 z-30 px-2 pb-safe">
+      <div class="grid grid-cols-5 h-16" id="mobile-nav">
+        <!-- Populated by JS -->
+      </div>
+    </nav>
+  </div>
+
+  <!-- Toast Notification Banner -->
+  <div id="toast-container" class="fixed top-20 right-4 left-4 sm:left-auto sm:w-96 z-50 pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- Universal Modal Backdrop -->
+  <div id="modal-backdrop" class="hidden fixed inset-0 bg-[#172B4D]/50 backdrop-blur-[1px] z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div id="modal-panel" class="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border border-gray-200 shadow-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <!-- Modal content injected here -->
+    </div>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * FITTRACK – PRODUCTION GYM & HYPERTROPHY TRACKING APPLICATION
+     * Architecture:
+     * 1. Date & Scheduling Engine (Transition Week Phase 1 -> Regular PPL Phase 2)
+     * 2. Complete Exercise Library & Default Workout Splits
+     * 3. Versioned LocalStorage State Manager with Validation & Migration
+     * 4. Live Workout Execution Engine, Rest Timer & Automatic Attendance Tracker
+     * 5. Analytics & Chart.js Engine (Zero hardcoded fake stats)
+     * 6. Full Responsive UI Views (Home, Workout, Calendar, Analytics, Profile/More)
+     * ============================================================================
+     */
+
+    // ----------------------------------------------------------------------------
+    // 1. DATE UTILITIES (Local Calendar Safe YYYY-MM-DD)
+    // ----------------------------------------------------------------------------
+    const DateUtils = {
+      toKey(dateObj = new Date()) {
+        const d = new Date(dateObj);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      },
+      fromKey(key) {
+        const [y, m, d] = key.split('-').map(Number);
+        return new Date(y, m - 1, d);
+      },
+      addDays(key, days) {
+        const d = this.fromKey(key);
+        d.setDate(d.getDate() + days);
+        return this.toKey(d);
+      },
+      getMondayOfWeek(key) {
+        const d = this.fromKey(key);
+        const day = d.getDay(); // 0 Sun, 1 Mon ... 6 Sat
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        d.setDate(diff);
+        return this.toKey(d);
+      },
+      formatDisplay(key, opts = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) {
+        return this.fromKey(key).toLocaleDateString('en-US', opts);
+      },
+      getDayIndexMon0(key) {
+        // 0 = Mon, 1 = Tue, ..., 6 = Sun
+        const day = this.fromKey(key).getDay();
+        return day === 0 ? 6 : day - 1;
+      },
+      getDayName(key) {
+        const names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        return names[this.getDayIndexMon0(key)];
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 2. COMPLETE EXERCISE LIBRARY & DEFAULT WORKOUT TEMPLATES
+    // ----------------------------------------------------------------------------
+    const EXERCISE_ILLUSTRATIONS = {
+      chest: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="10" y="26" width="44" height="12" rx="6" fill="#EAF1FF"/><path d="M18 26V16M46 26V16M12 16h12M40 16h12" stroke-linecap="round"/></svg>`,
+      back: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 14h40M32 14v14M20 28l12 10 12-10" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="46" r="6" fill="#EAF1FF"/></svg>`,
+      shoulders: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="20" r="6" fill="#EAF1FF"/><path d="M14 34l10-6h16l10 6M14 26v14M50 26v14" stroke-linecap="round"/></svg>`,
+      arms: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 44c0-10 8-18 18-18h10v10c0 10-8 18-18 18H18V44z" fill="#EAF1FF"/><path d="M40 20l8-8" stroke-linecap="round"/></svg>`,
+      legs: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 14h20l-4 20 6 16h-8l-6-14-6 14h-8l6-16-4-20z" fill="#EAF1FF" stroke-linejoin="round"/></svg>`,
+      core: `<svg viewBox="0 0 64 64" class="w-10 h-10 text-[#155EEF]" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="20" y="14" width="24" height="36" rx="6" fill="#EAF1FF"/><path d="M20 26h24M20 38h24M32 14v36"/></svg>`
+    };
+
+    const EXERCISE_DB = [
+      // PUSH A
+      { id: 'inc_db_press', name: 'Incline Dumbbell Press', primary: 'Chest', secondary: 'Front Delts, Triceps', equipment: 'Dumbbell', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'chest', instructions: 'Set bench to 30°. Retract shoulder blades, lower dumbbells with elbows at 45° to upper chest, press smoothly without clanking weights.', mistakes: 'Flaring elbows 90°, bouncing off chest, excessive lower back arch.' },
+      { id: 'flat_mach_press', name: 'Flat Machine Chest Press', primary: 'Chest', secondary: 'Triceps, Front Delts', equipment: 'Machine', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'chest', instructions: 'Adjust seat so handles align with mid-chest. Keep back flat against pad and press to full extension without locking elbows harshly.', mistakes: 'Rolling shoulders forward at lockout, partial reps.' },
+      { id: 'cable_chest_fly', name: 'Cable Chest Fly', primary: 'Chest', secondary: 'Front Delts', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'chest', instructions: 'Set pulleys at chest height. Step forward into staggered stance, keep slight bend in elbows, bring hands together in a wide hugging arc.', mistakes: 'Turning fly into a press, letting shoulders roll forward.' },
+      { id: 'seated_sh_press', name: 'Seated Shoulder Press', primary: 'Shoulders', secondary: 'Triceps', equipment: 'Dumbbell', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'shoulders', instructions: 'Set bench upright. Brace core, press weights overhead in slight arc until biceps align near ears, lower with control to ear level.', mistakes: 'Hyperextending lower back, flaring ribs.' },
+      { id: 'cable_lat_raise', name: 'Cable Lateral Raises', primary: 'Shoulders', secondary: 'Upper Traps', equipment: 'Cable', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'shoulders', instructions: 'Set pulley at wrist height. Lead with elbow out to the side in scapular plane until arm is parallel to floor. Control the eccentric.', mistakes: 'Using body momentum, shrugging traps aggressively.' },
+      { id: 'rope_tri_pushdown', name: 'Rope Triceps Pushdown', primary: 'Triceps', secondary: 'None', equipment: 'Cable', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–15', icon: 'arms', instructions: 'Pin elbows tightly to ribs. Extend forearms downward and spread rope ends apart at the bottom for peak contraction.', mistakes: 'Letting elbows drift forward, leaning body weight over the rope.' },
+      { id: 'oh_cable_tri_ext', name: 'Overhead Cable Triceps Extension', primary: 'Triceps', secondary: 'None', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Face away from low/mid pulley, keep upper arms locked beside head, stretch triceps deep behind neck and extend fully.', mistakes: 'Elbows flaring wide, arching lower spine.' },
+      { id: 'cable_crunch', name: 'Cable Crunch', primary: 'Abs', secondary: 'Obliques', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '15', icon: 'core', instructions: 'Kneel below high pulley holding rope beside temples. Flex thoracic spine downward toward pelvis, exhaling hard at bottom.', mistakes: 'Sitting back onto heels instead of curling spine.' },
+
+      // PULL A
+      { id: 'pullups', name: 'Pull-ups / Assisted Pull-ups', primary: 'Back', secondary: 'Biceps, Rear Delts', equipment: 'Bodyweight / Machine', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–10', icon: 'back', instructions: 'Grip slightly wider than shoulder width. Depress shoulder blades first, drive elbows down toward hips until chin clears bar.', mistakes: 'Kipping legs, half-range reps at the bottom.' },
+      { id: 'lat_pulldown', name: 'Lat Pulldown', primary: 'Back', secondary: 'Biceps', equipment: 'Cable', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'back', instructions: 'Lock thighs under pad. Lean back 10–15°, pull bar smoothly to upper collarbone while driving elbows down.', mistakes: 'Pulling behind neck, excessive torso swinging.' },
+      { id: 'chest_supp_row', name: 'Chest Supported Row', primary: 'Back', secondary: 'Rear Delts, Biceps', equipment: 'Machine', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'back', instructions: 'Keep chest planted firmly on pad. Let shoulders protract at bottom for stretch, then squeeze shoulder blades together.', mistakes: 'Lifting chest off pad to heave weight.' },
+      { id: 'single_arm_cable_row', name: 'Single Arm Cable Row', primary: 'Back', secondary: 'Biceps, Core', equipment: 'Cable', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'back', instructions: 'Brace free hand on frame. Pull handle toward lower ribs keeping elbow tucked, allow full stretch forward between reps.', mistakes: 'Twisting torso excessively to finish pull.' },
+      { id: 'rev_pec_deck', name: 'Reverse Pec Deck', primary: 'Shoulders', secondary: 'Upper Back', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'shoulders', instructions: 'Adjust seat so handles are at shoulder height. Push handles back in wide arc focusing on rear delts rather than squeezing traps.', mistakes: 'Bending elbows too much and turning into a row.' },
+      { id: 'inc_db_curl', name: 'Incline Dumbbell Curl', primary: 'Biceps', secondary: 'Forearms', equipment: 'Dumbbell', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Set bench to 45–60°. Let arms hang straight behind torso for long-head stretch, curl palms up without swinging elbows forward.', mistakes: 'Driving elbows forward during concentric phase.' },
+      { id: 'ez_preacher_curl', name: 'EZ Bar Preacher Curl', primary: 'Biceps', secondary: 'Forearms', equipment: 'Barbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Rest armpits firmly over top of preacher pad. Lower bar to near full extension with control, curl smoothly without lifting elbows.', mistakes: 'Bouncing out of the bottom stretch.' },
+      { id: 'rev_wrist_curl', name: 'Reverse Wrist Curl', primary: 'Forearms', secondary: 'None', equipment: 'Dumbbell / Barbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 2, defaultReps: '15', icon: 'arms', instructions: 'Rest forearms on bench/thighs with palms facing down. Extend knuckles upward smoothly and lower under control.', mistakes: 'Using too heavy weight and lifting forearms off support.' },
+      { id: 'wrist_curl', name: 'Wrist Curl', primary: 'Forearms', secondary: 'None', equipment: 'Dumbbell / Barbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 2, defaultReps: '15', icon: 'arms', instructions: 'Rest forearms on bench/thighs with palms facing up. Let bar roll slightly to fingertips, then curl wrists upward.', mistakes: 'Rushing reps without full wrist flexion.' },
+      { id: 'hanging_knee_raises', name: 'Hanging Knee Raises', primary: 'Abs', secondary: 'Hip Flexors, Forearms', equipment: 'Bodyweight', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '12', icon: 'core', instructions: 'Hang with active shoulders. Posteriorly tilt pelvis and curl knees up toward chest, lowering slowly without swinging.', mistakes: 'Swinging legs using momentum.' },
+
+      // LEGS A
+      { id: 'hack_squat', name: 'Hack Squat', primary: 'Quadriceps', secondary: 'Glutes', equipment: 'Machine', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'legs', instructions: 'Place feet shoulder-width mid-to-low on platform. Keep lower back glued to pad, descend until thighs break parallel, drive through mid-foot.', mistakes: 'Heels lifting off platform, lower back rounding off pad.' },
+      { id: 'leg_press', name: 'Leg Press', primary: 'Quadriceps', secondary: 'Glutes, Hamstrings', equipment: 'Machine', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'legs', instructions: 'Place feet shoulder-width apart. Lower sled until knees reach 90°+ without hips curling off seat, press without locking knees out.', mistakes: 'Locking knees aggressively at top, hips lifting at bottom.' },
+      { id: 'bulgarian_split_squat', name: 'Bulgarian Split Squat', primary: 'Quadriceps', secondary: 'Glutes, Hamstrings', equipment: 'Dumbbell', difficulty: 'Advanced', type: 'Compound', defaultSets: 3, defaultReps: '10 each leg', icon: 'legs', instructions: 'Elevate rear foot on bench. Lower back knee straight down keeping front shin stable and slight torso lean, drive through front foot.', mistakes: 'Rear foot too high, front knee caving inward.' },
+      { id: 'leg_extension', name: 'Leg Extension', primary: 'Quadriceps', secondary: 'None', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'legs', instructions: 'Align knee joint with machine pivot. Extend legs to full quad squeeze, pause briefly, lower over 2–3 seconds.', mistakes: 'Kicking weight up with hip momentum.' },
+      { id: 'seated_leg_curl', name: 'Seated Leg Curl', primary: 'Hamstrings', secondary: 'Calves', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'legs', instructions: 'Lock thigh pad snugly. Flex knees pulling heel under seat as far as possible, control return to full stretch.', mistakes: 'Hips lifting off seat during heavy pulls.' },
+      { id: 'standing_calf_raises', name: 'Standing Calf Raises', primary: 'Calves', secondary: 'None', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'legs', instructions: 'Pause 1–2 seconds in deep bottom stretch to eliminate Achilles bounce, then drive up onto big toes.', mistakes: 'Bouncing quickly at bottom.' },
+      { id: 'reverse_crunch', name: 'Reverse Crunch', primary: 'Abs', secondary: 'None', equipment: 'Bodyweight', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '15', icon: 'core', instructions: 'Lie flat, brace core, curl hips and lower back off floor toward ribs rather than just swinging legs.', mistakes: 'Dropping legs quickly and arching lumbar spine.' },
+
+      // PUSH B
+      { id: 'inc_smith_press', name: 'Incline Smith Machine Press', primary: 'Chest', secondary: 'Shoulders, Triceps', equipment: 'Machine', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'chest', instructions: 'Set bench at 30° so bar touches upper chest/clavicle line. Control descent for 2 seconds and drive smoothly.', mistakes: 'Bar path landing too low on sternum or too high on neck.' },
+      { id: 'flat_db_press', name: 'Flat Dumbbell Press', primary: 'Chest', secondary: 'Triceps, Front Delts', equipment: 'Dumbbell', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'chest', instructions: 'Plant feet firmly, keep mild thoracic arch, lower dumbbells deep beside mid-chest and press up.', mistakes: 'Bouncing elbows at bottom.' },
+      { id: 'low_to_high_fly', name: 'Low-to-High Cable Fly', primary: 'Chest', secondary: 'Front Delts', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'chest', instructions: 'Set pulleys at lowest notch. Scoop arms upward and inward until hands meet at upper-chest/chin level.', mistakes: 'Bending elbows excessively into a front raise.' },
+      { id: 'db_lat_raises', name: 'Dumbbell Lateral Raises', primary: 'Shoulders', secondary: 'Upper Traps', equipment: 'Dumbbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'shoulders', instructions: 'Slight forward torso lean, raise dumbbells out in scapular plane leading with elbows to shoulder height.', mistakes: 'Swinging torso, raising hands higher than elbows.' },
+      { id: 'mach_sh_press', name: 'Machine Shoulder Press', primary: 'Shoulders', secondary: 'Triceps', equipment: 'Machine', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'shoulders', instructions: 'Align handles with ear/chin level. Press smoothly overhead keeping core braced against backrest.', mistakes: 'Partial top-half reps.' },
+      { id: 'single_arm_tri_ext', name: 'Single Arm Cable Triceps Extension', primary: 'Triceps', secondary: 'None', equipment: 'Cable', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Hold cable ball/handle with neutral or supinated grip. Keep upper arm stationary and extend fully.', mistakes: 'Rotating shoulder forward at lockout.' },
+      { id: 'ab_wheel_rollout', name: 'Ab Wheel Rollout', primary: 'Abs', secondary: 'Lats, Shoulders', equipment: 'Bodyweight', difficulty: 'Advanced', type: 'Compound', defaultSets: 2, defaultReps: '8–12', icon: 'core', instructions: 'Tuck pelvis (hollow body), roll wheel forward only as far as lower back stays flat, pull back with abs.', mistakes: 'Sagging hips and hyperextending lower back.' },
+
+      // PULL B
+      { id: 'tbar_row', name: 'T-Bar Chest Supported Row', primary: 'Back', secondary: 'Rear Delts, Biceps', equipment: 'Machine', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'back', instructions: 'Keep chest supported on pad. Pull handles toward mid-torso, squeezing mid-back thickness hard.', mistakes: 'Jerking torso off pad.' },
+      { id: 'neutral_lat_pulldown', name: 'Neutral Grip Lat Pulldown', primary: 'Back', secondary: 'Biceps, Forearms', equipment: 'Cable', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'back', instructions: 'Use shoulder-width neutral attachment. Drive elbows straight down toward hips, keeping chest proud.', mistakes: 'Leaning back horizontal.' },
+      { id: 'seated_cable_row', name: 'Seated Cable Row', primary: 'Back', secondary: 'Biceps, Rear Delts', equipment: 'Cable', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'back', instructions: 'Sit upright with slight knee bend. Pull handle to lower abdomen, pause, allow controlled shoulder protraction.', mistakes: 'Excessive forward-and-back rocking.' },
+      { id: 'straight_arm_pulldown', name: 'Straight Arm Cable Pulldown', primary: 'Back', secondary: 'Triceps Long Head', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'back', instructions: 'Hinge slightly at hips, keep arms nearly straight, sweep bar from overhead down to thighs using lats.', mistakes: 'Bending elbows and turning into a pushdown.' },
+      { id: 'cable_rear_delt_fly', name: 'Cable Rear Delt Fly', primary: 'Shoulders', secondary: 'Upper Back', equipment: 'Cable', difficulty: 'Intermediate', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'shoulders', instructions: 'Cross cables at shoulder height. Pull arms outward and slightly back in line with rear delt fibers.', mistakes: 'Pinching shoulder blades together prematurely.' },
+      { id: 'ez_bar_curl', name: 'EZ Bar Curl', primary: 'Biceps', secondary: 'Forearms', equipment: 'Barbell', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Stand tall with elbows pinned at sides. Curl bar smoothly to shoulder level and lower over 2–3 seconds.', mistakes: 'Swinging hips to initiate curl.' },
+      { id: 'db_bicep_curl', name: 'Dumbbell Bicep Curl', primary: 'Biceps', secondary: 'Forearms', equipment: 'Dumbbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 2, defaultReps: '12', icon: 'arms', instructions: 'Stand tall with elbows pinned at sides, palms facing forward. Curl dumbbells smoothly and lower under control.', mistakes: 'Swinging torso or elbows forward.' },
+      { id: 'hammer_curl', name: 'Hammer Curl', primary: 'Biceps', secondary: 'Forearms', equipment: 'Dumbbell', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'arms', instructions: 'Hold dumbbells with neutral palms-facing grip. Curl up without rotating wrists to target brachialis and forearms.', mistakes: 'Swinging weights across body.' },
+      { id: 'cable_woodchoppers', name: 'Cable Woodchoppers', primary: 'Abs', secondary: 'Obliques, Shoulders', equipment: 'Cable', difficulty: 'Intermediate', type: 'Compound', defaultSets: 2, defaultReps: '12 each side', icon: 'core', instructions: 'Set pulley high or mid. Rotate torso diagonally across body keeping arms extended and hips stable.', mistakes: 'Pulling only with arms instead of rotating core.' },
+      { id: 'dead_bug', name: 'Dead Bug', primary: 'Abs', secondary: 'Core Stabilizers', equipment: 'Bodyweight', difficulty: 'Beginner', type: 'Isolation', defaultSets: 2, defaultReps: '10', icon: 'core', instructions: 'Lie flat with lower back pressed firmly into floor, arms and knees up at 90°. Slowly extend opposite arm and leg while bracing core.', mistakes: 'Allowing lower back to arch off the floor.' },
+
+      // LEGS B
+      { id: 'rdl', name: 'Romanian Deadlift', primary: 'Hamstrings', secondary: 'Glutes, Lower Back', equipment: 'Barbell / Dumbbell', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–10', icon: 'legs', instructions: 'Keep soft knee bend and neutral spine. Push hips straight backward until deep hamstring stretch is felt below knees, drive hips forward.', mistakes: 'Rounding lumbar spine, squatting the weight down.' },
+      { id: 'hip_thrust', name: 'Hip Thrust', primary: 'Glutes', secondary: 'Hamstrings', equipment: 'Barbell / Machine', difficulty: 'Intermediate', type: 'Compound', defaultSets: 3, defaultReps: '8–12', icon: 'legs', instructions: 'Rest upper back on bench, shins vertical at top. Drive through heels to full hip extension, tucking chin and squeezing glutes.', mistakes: 'Hyperextending lower back at lockout.' },
+      { id: 'lying_leg_curl', name: 'Lying Leg Curl', primary: 'Hamstrings', secondary: 'Calves', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '10–12', icon: 'legs', instructions: 'Keep hips pressed flat into bench pad. Curl ankles toward glutes smoothly and control the lowering phase.', mistakes: 'Lifting hips off pad as weight gets heavy.' },
+      { id: 'goblet_squat', name: 'Goblet Squat', primary: 'Quadriceps', secondary: 'Glutes, Core', equipment: 'Dumbbell', difficulty: 'Beginner', type: 'Compound', defaultSets: 3, defaultReps: '10–12', icon: 'legs', instructions: 'Hold dumbbell vertically against chest. Keep torso upright, sit deep between knees, drive smoothly back up.', mistakes: 'Letting dumbbell pull torso forward.' },
+      { id: 'seated_calf_raises', name: 'Seated Calf Raises', primary: 'Calves', secondary: 'None', equipment: 'Machine', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '12–15', icon: 'legs', instructions: 'Targets soleus muscle. Pause at bottom stretch, press all the way up onto balls of feet.', mistakes: 'Short, bouncy half-reps.' },
+      { id: 'plank', name: 'Plank', primary: 'Abs', secondary: 'Shoulders, Glutes', equipment: 'Bodyweight', difficulty: 'Beginner', type: 'Isolation', defaultSets: 3, defaultReps: '30–45 sec', icon: 'core', instructions: 'Elbows under shoulders, squeeze glutes and quads, brace abs hard as if bracing for a punch.', mistakes: 'Hips sagging toward floor or piking too high.' }
+    ];
+
+    const DEFAULT_TEMPLATES = {
+      'MIXED_MON': {
+        id: 'MIXED_MON',
+        name: 'Day 1 – Full Body (A)',
+        shortName: 'Full Body A',
+        muscles: 'Chest, Back, Shoulders, Legs, Arms, Core',
+        estDuration: '45–55 min',
+        exercises: ['flat_mach_press', 'lat_pulldown', 'mach_sh_press', 'leg_press', 'seated_leg_curl', 'db_bicep_curl', 'rope_tri_pushdown', 'plank'],
+        exerciseOverrides: {
+          flat_mach_press: { sets: 2, reps: '12' },
+          lat_pulldown: { sets: 2, reps: '12' },
+          mach_sh_press: { sets: 2, reps: '10' },
+          leg_press: { sets: 2, reps: '12' },
+          seated_leg_curl: { sets: 2, reps: '12' },
+          db_bicep_curl: { sets: 2, reps: '12' },
+          rope_tri_pushdown: { sets: 2, reps: '12' },
+          plank: { sets: 2, reps: '20 sec' }
+        },
+        absExercise: 'plank',
+        isMixed: true
+      },
+      'MIXED_TUE': {
+        id: 'MIXED_TUE',
+        name: 'Day 2 – Full Body (B)',
+        shortName: 'Full Body B',
+        muscles: 'Upper Chest, Back, Shoulders, Quads, Arms, Core',
+        estDuration: '45–55 min',
+        exercises: ['inc_db_press', 'seated_cable_row', 'db_lat_raises', 'goblet_squat', 'leg_extension', 'hammer_curl', 'rope_tri_pushdown', 'dead_bug'],
+        exerciseOverrides: {
+          inc_db_press: { sets: 2, reps: '12' },
+          seated_cable_row: { sets: 2, reps: '12' },
+          db_lat_raises: { sets: 2, reps: '12' },
+          goblet_squat: { sets: 2, reps: '10' },
+          leg_extension: { sets: 2, reps: '12' },
+          hammer_curl: { sets: 2, reps: '12' },
+          rope_tri_pushdown: { sets: 2, reps: '12' },
+          dead_bug: { sets: 2, reps: '10' }
+        },
+        absExercise: 'dead_bug',
+        isMixed: true
+      },
+      'PUSH_A': {
+        id: 'PUSH_A',
+        name: 'PUSH A',
+        shortName: 'Push A',
+        muscles: 'Chest, Shoulders, Triceps',
+        estDuration: '55–65 min',
+        exercises: ['inc_db_press', 'flat_mach_press', 'cable_chest_fly', 'seated_sh_press', 'cable_lat_raise', 'rope_tri_pushdown', 'oh_cable_tri_ext'],
+        absExercise: 'cable_crunch'
+      },
+      'PULL_A': {
+        id: 'PULL_A',
+        name: 'PULL A',
+        shortName: 'Pull A',
+        muscles: 'Back, Rear Delts, Biceps, Forearms',
+        estDuration: '60–70 min',
+        exercises: ['pullups', 'lat_pulldown', 'chest_supp_row', 'single_arm_cable_row', 'rev_pec_deck', 'inc_db_curl', 'ez_preacher_curl', 'rev_wrist_curl', 'wrist_curl'],
+        absExercise: 'hanging_knee_raises'
+      },
+      'LEGS_A': {
+        id: 'LEGS_A',
+        name: 'LEGS A',
+        shortName: 'Legs A',
+        muscles: 'Quadriceps, Hamstrings, Glutes, Calves',
+        estDuration: '55–65 min',
+        exercises: ['hack_squat', 'leg_press', 'bulgarian_split_squat', 'leg_extension', 'seated_leg_curl', 'standing_calf_raises'],
+        absExercise: 'reverse_crunch'
+      },
+      'PUSH_B': {
+        id: 'PUSH_B',
+        name: 'PUSH B',
+        shortName: 'Push B',
+        muscles: 'Upper Chest, Chest, Shoulders, Triceps',
+        estDuration: '55–65 min',
+        exercises: ['inc_smith_press', 'flat_db_press', 'low_to_high_fly', 'db_lat_raises', 'mach_sh_press', 'single_arm_tri_ext', 'rope_tri_pushdown'],
+        absExercise: 'ab_wheel_rollout'
+      },
+      'PULL_B': {
+        id: 'PULL_B',
+        name: 'PULL B',
+        shortName: 'Pull B',
+        muscles: 'Back Thickness, Rear Delts, Biceps, Forearms',
+        estDuration: '60–70 min',
+        exercises: ['tbar_row', 'neutral_lat_pulldown', 'seated_cable_row', 'straight_arm_pulldown', 'cable_rear_delt_fly', 'ez_bar_curl', 'hammer_curl', 'rev_wrist_curl', 'wrist_curl'],
+        absExercise: 'cable_woodchoppers'
+      },
+      'LEGS_B': {
+        id: 'LEGS_B',
+        name: 'LEGS B',
+        shortName: 'Legs B',
+        muscles: 'Hamstrings, Glutes, Quadriceps, Calves',
+        estDuration: '55–65 min',
+        exercises: ['rdl', 'hip_thrust', 'lying_leg_curl', 'goblet_squat', 'leg_extension', 'seated_calf_raises'],
+        absExercise: 'plank'
+      },
+      'REST': {
+        id: 'REST',
+        name: 'REST & RECOVERY',
+        shortName: 'Rest',
+        muscles: 'Active Recovery, Mobility & CNS Restoration',
+        estDuration: '15–20 min optional',
+        exercises: [],
+        absExercise: null,
+        isRest: true
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 3. CENTRALIZED STATE & VERSIONED LOCALSTORAGE MANAGER
+    // ----------------------------------------------------------------------------
+    const STORAGE_KEY = 'fittrack_state_v1';
+
+    function createInitialState() {
+      const todayKey = DateUtils.toKey(new Date());
+      const transitionMondayKey = DateUtils.getMondayOfWeek(todayKey);
+      const transitionTuesdayKey = DateUtils.addDays(transitionMondayKey, 1);
+      const regularStartMondayKey = DateUtils.addDays(transitionMondayKey, 7);
+
+      // Build Monday's pre-logged manual mixed session as specified in Phase 1
+      const monTemplate = DEFAULT_TEMPLATES['MIXED_MON'];
+      const monSession = {
+        id: `session_${transitionMondayKey}_init`,
+        date: transitionMondayKey,
+        templateId: 'MIXED_MON',
+        workoutName: monTemplate.name,
+        muscles: monTemplate.muscles,
+        status: 'completed',
+        startedAt: DateUtils.fromKey(transitionMondayKey).getTime() + 17 * 3600 * 1000,
+        endedAt: DateUtils.fromKey(transitionMondayKey).getTime() + 17 * 3600 * 1000 + 48 * 60 * 1000,
+        durationSeconds: 2880,
+        notes: 'Day 1 – Full Body (A) First gym session completed manually. Click Edit to update exact weights.',
+        exercises: monTemplate.exercises.map(exId => {
+          const meta = EXERCISE_DB.find(e => e.id === exId);
+          const tplOverride = monTemplate.exerciseOverrides?.[exId] || {};
+          const numSets = tplOverride.sets || meta.defaultSets;
+          const targetReps = tplOverride.reps || meta.defaultReps;
+          return {
+            exerciseId: exId,
+            name: meta.name,
+            primary: meta.primary,
+            targetReps,
+            warmup: { weight: '', reps: '12', completed: true },
+            sets: Array.from({ length: numSets }, () => ({ weight: '', reps: targetReps, completed: true })),
+            skipped: false,
+            skipReason: '',
+            notes: ''
+          };
+        })
+      };
+
+      return {
+        version: 1,
+        profile: {
+          name: 'Athlete',
+          weightKg: 54,
+          heightCm: '',
+          experience: 'Intermediate (Returning after 5 months)',
+          goal: 'Weight Gain & Muscle Building',
+          split: 'Push / Pull / Legs × 2',
+          restDay: 'Sunday',
+          defaultRestSeconds: 90,
+          soundEnabled: true
+        },
+        scheduleConfig: {
+          // Transition week anchors once to the initial week when user starts
+          transitionWeekMonday: transitionMondayKey,
+          regularPhaseStartMonday: regularStartMondayKey,
+          // Date-specific overrides (for rescheduling, missed workouts, or manual schedule edits)
+          dateOverrides: {}
+        },
+        templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)),
+        customExerciseConfig: {}, // overrides for targetSets / targetReps per exerciseId
+        sessions: [monSession],
+        activeSession: null,
+        attendance: {
+          [transitionMondayKey]: { attended: true, source: 'manual_initial', note: 'Transition Day 1 (Mixed Workout)' }
+        },
+        dailyRoutines: {
+          // keyed by YYYY-MM-DD
+          [transitionMondayKey]: {
+            cycling: { completed: true, minutes: 6 },
+            pushups: { set1Done: true, set1Reps: 15, set2Done: true, set2Reps: 15, skippedSoreness: false },
+            abs: { exerciseId: 'plank', setsCompleted: 3, repsOrSec: '35s', completed: true },
+            forearms: { revWristDone: false, wristDone: false }
+          }
+        },
+        recoveryLogs: {
+          // keyed by YYYY-MM-DD: { energy: 1-5, soreness: 1-5, sleep: 1-5, readiness: 1-5, note: '' }
+        },
+        personalRecords: {
+          // keyed by exerciseId: { maxWeight: number, bestRepsAtMax: number, bestVolumeSet: {weight, reps, score}, date: string, history: [{date, weight, reps}] }
+        },
+        ui: {
+          currentTab: 'home',
+          selectedDate: todayKey,
+          calendarMonth: todayKey.slice(0, 7), // YYYY-MM
+          analyticsExercise: 'inc_db_press',
+          analyticsRange: '30',
+          libraryFilterMuscle: 'All',
+          libraryFilterEquip: 'All',
+          librarySearch: ''
+        }
+      };
+    }
+
+    const Store = {
+      state: null,
+
+      init() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.version === 1 && parsed.profile && parsed.scheduleConfig) {
+              this.state = this.migrate(parsed);
+              this.save();
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('LocalStorage load error, falling back to clean state:', err);
+        }
+        this.state = createInitialState();
+        this.save();
+      },
+
+      migrate(data) {
+        const base = createInitialState();
+        const merged = {
+          ...base,
+          ...data,
+          profile: { ...base.profile, ...(data.profile || {}) },
+          scheduleConfig: { ...base.scheduleConfig, ...(data.scheduleConfig || {}) },
+          templates: {
+            ...base.templates,
+            ...(data.templates || {}),
+            // Ensure Day 1 & Day 2 Full Body A/B transition updates apply cleanly
+            MIXED_MON: base.templates.MIXED_MON,
+            MIXED_TUE: base.templates.MIXED_TUE
+          },
+          ui: { ...base.ui, ...(data.ui || {}) }
+        };
+
+        // Sync initial Monday pre-logged session if it hasn't been manually edited with custom weights yet
+        const initIdx = merged.sessions.findIndex(s => s.id && s.id.endsWith('_init'));
+        if (initIdx !== -1) {
+          const hasCustomWeights = merged.sessions[initIdx].exercises.some(ex => ex.sets.some(st => st.weight && st.weight !== ''));
+          if (!hasCustomWeights) {
+            merged.sessions[initIdx] = base.sessions[0];
+          }
+        }
+        return merged;
+      },
+
+      save() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
+        } catch (err) {
+          console.error('LocalStorage save error:', err);
+          App.showToast('Storage warning: Could not save to browser storage.', 'danger');
+        }
+      },
+
+      resetAll() {
+        localStorage.removeItem(STORAGE_KEY);
+        this.state = createInitialState();
+        this.save();
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 4. SCHEDULING LOGIC ENGINE (PHASE 1 TRANSITION -> PHASE 2 REGULAR PPL)
+    // ----------------------------------------------------------------------------
+    const Scheduler = {
+      /**
+       * Determines the scheduled templateId and phase info for ANY calendar dateKey (YYYY-MM-DD).
+       * Phase 1 (Custom Transition Week):
+       *   Mon: MIXED_MON (already completed manually)
+       *   Tue: MIXED_TUE (current mixed training session)
+       *   Wed: LEGS_A
+       *   Thu: PUSH_B
+       *   Fri: PULL_B
+       *   Sat: LEGS_B
+       *   Sun: REST
+       * Phase 2 (Starting next Monday, recurring forever):
+       *   Mon: PUSH_A, Tue: PULL_A, Wed: LEGS_A, Thu: PUSH_B, Fri: PULL_B, Sat: LEGS_B, Sun: REST
+       */
+      getScheduleForDate(dateKey) {
+        const cfg = Store.state.scheduleConfig;
+
+        // 1. Check explicit manual date override first (rescheduled / custom edit)
+        if (cfg.dateOverrides && cfg.dateOverrides[dateKey]) {
+          const overrideId = cfg.dateOverrides[dateKey];
+          const tpl = Store.state.templates[overrideId] || Store.state.templates['REST'];
+          return {
+            dateKey,
+            templateId: overrideId,
+            template: tpl,
+            phase: dateKey < cfg.regularPhaseStartMonday ? 'Phase 1: Custom Transition Week' : 'Phase 2: Regular PPL Split',
+            isTransition: dateKey < cfg.regularPhaseStartMonday,
+            isOverride: true
+          };
+        }
+
+        const dayIdx = DateUtils.getDayIndexMon0(dateKey); // 0=Mon ... 6=Sun
+        const isTransitionWeek = dateKey >= cfg.transitionWeekMonday && dateKey < cfg.regularPhaseStartMonday;
+
+        let templateId = 'REST';
+        if (isTransitionWeek) {
+          const transitionMap = ['MIXED_MON', 'MIXED_TUE', 'LEGS_A', 'PUSH_B', 'PULL_B', 'LEGS_B', 'REST'];
+          templateId = transitionMap[dayIdx];
+        } else {
+          const regularMap = ['PUSH_A', 'PULL_A', 'LEGS_A', 'PUSH_B', 'PULL_B', 'LEGS_B', 'REST'];
+          templateId = regularMap[dayIdx];
+        }
+
+        const template = Store.state.templates[templateId] || Store.state.templates['REST'];
+        return {
+          dateKey,
+          templateId,
+          template,
+          phase: isTransitionWeek ? 'Phase 1: Custom Transition Week' : 'Phase 2: Regular PPL × 2 Split',
+          isTransition: isTransitionWeek,
+          isOverride: false
+        };
+      },
+
+      getDayStatus(dateKey) {
+        const todayKey = DateUtils.toKey(new Date());
+        const sched = this.getScheduleForDate(dateKey);
+        const sessionsOnDate = Store.state.sessions.filter(s => s.date === dateKey);
+        const activeOnDate = Store.state.activeSession && Store.state.activeSession.date === dateKey ? Store.state.activeSession : null;
+        const attended = Boolean(Store.state.attendance[dateKey]?.attended);
+
+        const completedSession = sessionsOnDate.find(s => s.status === 'completed');
+        const partialSession = sessionsOnDate.find(s => s.status === 'partial');
+
+        if (activeOnDate) {
+          return { code: 'in_progress', label: 'In Progress', attended, sched, session: activeOnDate };
+        }
+        if (completedSession) {
+          return { code: 'completed', label: 'Completed', attended: true, sched, session: completedSession };
+        }
+        if (partialSession) {
+          return { code: 'partial', label: 'Partial', attended, sched, session: partialSession };
+        }
+        if (sched.template.isRest) {
+          return { code: 'rest', label: 'Rest Day', attended, sched, session: null };
+        }
+        if (dateKey < todayKey) {
+          return { code: 'missed', label: 'Missed', attended, sched, session: null };
+        }
+        if (dateKey === todayKey) {
+          return { code: 'today', label: 'Today', attended, sched, session: null };
+        }
+        return { code: 'upcoming', label: 'Upcoming', attended, sched, session: null };
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 5. ANALYTICS & ATTENDANCE CALCULATOR (100% REAL SAVED DATA)
+    // ----------------------------------------------------------------------------
+    const AnalyticsEngine = {
+      getAttendanceMetrics() {
+        const today = new Date();
+        const todayKey = DateUtils.toKey(today);
+        const currentMonthPrefix = todayKey.slice(0, 7);
+        const currentYearPrefix = todayKey.slice(0, 4);
+
+        const attendedDates = Object.keys(Store.state.attendance)
+          .filter(k => Store.state.attendance[k]?.attended)
+          .sort();
+
+        const visitsThisMonth = attendedDates.filter(d => d.startsWith(currentMonthPrefix)).length;
+        const visitsThisYear = attendedDates.filter(d => d.startsWith(currentYearPrefix)).length;
+
+        // Weekly attendance (Mon-Sun of current week)
+        const weekMon = DateUtils.getMondayOfWeek(todayKey);
+        let weeklyVisits = 0;
+        let weeklyPlanned = 0;
+        for (let i = 0; i < 7; i++) {
+          const dk = DateUtils.addDays(weekMon, i);
+          if (Store.state.attendance[dk]?.attended) weeklyVisits++;
+          const sch = Scheduler.getScheduleForDate(dk);
+          if (!sch.template.isRest) weeklyPlanned++;
+        }
+
+        // Monthly attendance percentage (attended days vs planned non-rest days up to today in current month)
+        const year = today.getFullYear();
+        const month = today.getMonth();
+        const daysElapsedInMonth = today.getDate();
+        let plannedDaysSoFar = 0;
+        for (let day = 1; day <= daysElapsedInMonth; day++) {
+          const dk = DateUtils.toKey(new Date(year, month, day));
+          const sch = Scheduler.getScheduleForDate(dk);
+          if (!sch.template.isRest) plannedDaysSoFar++;
+        }
+        const monthlyAttendancePct = plannedDaysSoFar > 0
+          ? Math.min(100, Math.round((visitsThisMonth / plannedDaysSoFar) * 100))
+          : 0;
+
+        // Streaks (Rest days do not break a gym streak if surrounding training days are attended)
+        let currentStreak = 0;
+        let checkKey = todayKey;
+        // If today hasn't been attended yet, start checking from yesterday
+        if (!Store.state.attendance[checkKey]?.attended) {
+          checkKey = DateUtils.addDays(checkKey, -1);
+        }
+        for (let i = 0; i < 365; i++) {
+          const sch = Scheduler.getScheduleForDate(checkKey);
+          const isAtt = Boolean(Store.state.attendance[checkKey]?.attended);
+          if (isAtt) {
+            currentStreak++;
+          } else if (sch.template.isRest) {
+            // Sunday rest day bridges streak seamlessly
+          } else {
+            break;
+          }
+          checkKey = DateUtils.addDays(checkKey, -1);
+        }
+
+        // Longest streak across all recorded dates
+        let longestStreak = 0;
+        if (attendedDates.length > 0) {
+          let running = 0;
+          let cursor = attendedDates[0];
+          while (cursor <= todayKey) {
+            const sch = Scheduler.getScheduleForDate(cursor);
+            const isAtt = Boolean(Store.state.attendance[cursor]?.attended);
+            if (isAtt) {
+              running++;
+              if (running > longestStreak) longestStreak = running;
+            } else if (!sch.template.isRest) {
+              running = 0;
+            }
+            cursor = DateUtils.addDays(cursor, 1);
+          }
+        }
+
+        return {
+          visitsThisMonth,
+          visitsThisYear,
+          weeklyVisits,
+          weeklyPlanned,
+          monthlyAttendancePct,
+          currentStreak,
+          longestStreak
+        };
+      },
+
+      getWorkoutMetrics() {
+        const sessions = Store.state.sessions;
+        const completedWorkouts = sessions.filter(s => s.status === 'completed').length;
+
+        let totalPlannedExercises = 0;
+        let totalCompletedExercises = 0;
+
+        sessions.forEach(s => {
+          s.exercises.forEach(ex => {
+            totalPlannedExercises++;
+            const allWorkingDone = ex.sets.length > 0 && ex.sets.every(st => st.completed);
+            if (allWorkingDone && !ex.skipped) totalCompletedExercises++;
+          });
+        });
+
+        const exerciseCompletionPct = totalPlannedExercises > 0
+          ? Math.round((totalCompletedExercises / totalPlannedExercises) * 100)
+          : 0;
+
+        return {
+          completedWorkouts,
+          totalSessions: sessions.length,
+          totalPlannedExercises,
+          totalCompletedExercises,
+          exerciseCompletionPct
+        };
+      },
+
+      getMuscleGroupVolume() {
+        const groups = ['Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Forearms', 'Abs'];
+        const map = {};
+        groups.forEach(g => map[g] = { workingSets: 0, sessions: new Set() });
+
+        Store.state.sessions.forEach(s => {
+          s.exercises.forEach(ex => {
+            const meta = EXERCISE_DB.find(e => e.id === ex.exerciseId);
+            const primary = ex.primary || meta?.primary;
+            if (primary && map[primary]) {
+              const doneSets = ex.sets.filter(st => st.completed).length;
+              if (doneSets > 0) {
+                map[primary].workingSets += doneSets;
+                map[primary].sessions.add(s.date);
+              }
+            }
+          });
+        });
+
+        return groups.map(g => ({
+          muscle: g,
+          workingSets: map[g].workingSets,
+          frequency: map[g].sessions.size
+        }));
+      },
+
+      getStrengthHistory(exerciseId, rangeDays = '30') {
+        const cutoff = rangeDays === 'all'
+          ? '0000-00-00'
+          : DateUtils.addDays(DateUtils.toKey(new Date()), -Number(rangeDays));
+
+        const points = [];
+        const sortedSessions = [...Store.state.sessions].sort((a, b) => a.date.localeCompare(b.date));
+        sortedSessions.forEach(s => {
+          if (s.date < cutoff) return;
+          s.exercises.forEach(ex => {
+            if (ex.exerciseId === exerciseId) {
+              let topWeight = 0;
+              ex.sets.forEach(st => {
+                const w = parseFloat(st.weight);
+                if (st.completed && !isNaN(w) && w > topWeight) topWeight = w;
+              });
+              if (topWeight > 0) {
+                points.push({ date: s.date, weight: topWeight });
+              }
+            }
+          });
+        });
+        return points;
+      },
+
+      getMonthlyComparison() {
+        const now = new Date();
+        const currPrefix = DateUtils.toKey(now).slice(0, 7);
+        const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const prevPrefix = DateUtils.toKey(prevDate).slice(0, 7);
+
+        const calcForMonth = (prefix) => {
+          const visits = Object.keys(Store.state.attendance).filter(d => d.startsWith(prefix) && Store.state.attendance[d]?.attended).length;
+          const mSessions = Store.state.sessions.filter(s => s.date.startsWith(prefix));
+          const completed = mSessions.filter(s => s.status === 'completed').length;
+          const avgDurationMin = mSessions.length > 0
+            ? Math.round(mSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0) / mSessions.length / 60)
+            : 0;
+
+          let plannedEx = 0;
+          let doneEx = 0;
+          mSessions.forEach(s => s.exercises.forEach(ex => {
+            plannedEx++;
+            if (ex.sets.every(st => st.completed) && !ex.skipped) doneEx++;
+          }));
+          const completionRate = plannedEx > 0 ? Math.round((doneEx / plannedEx) * 100) : 0;
+
+          return { visits, completed, avgDurationMin, completionRate };
+        };
+
+        return {
+          currentLabel: now.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          prevLabel: prevDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          current: calcForMonth(currPrefix),
+          previous: calcForMonth(prevPrefix)
+        };
+      }
+    };
+
+    // ----------------------------------------------------------------------------
+    // 6. MAIN APPLICATION CONTROLLER & UI RENDERER
+    // ----------------------------------------------------------------------------
+    const App = {
+      timerInterval: null,
+      restTimer: {
+        preset: 90,
+        remaining: 90,
+        running: false,
+        intervalId: null
+      },
+      charts: {},
+
+      init() {
+        Store.init();
+        this.restTimer.preset = Store.state.profile.defaultRestSeconds || 90;
+        this.restTimer.remaining = this.restTimer.preset;
+
+        // Start 1-second global ticker for active workout clock
+        this.timerInterval = setInterval(() => this.tickWorkoutClock(), 1000);
+
+        this.renderNavigation();
+        this.renderHeaderMeta();
+        this.renderCurrentView();
+      },
+
+      // --- NAVIGATION & LAYOUT ---
+      navItems: [
+        { id: 'home', label: 'Home', icon: 'home' },
+        { id: 'workout', label: 'Workout', icon: 'dumbbell' },
+        { id: 'calendar', label: 'Calendar', icon: 'calendar' },
+        { id: 'analytics', label: 'Analytics', icon: 'bar-chart-2' },
+        { id: 'profile', label: 'Profile', icon: 'user' }
+      ],
+
+      navigate(tabId, subDateKey = null) {
+        Store.state.ui.currentTab = tabId;
+        if (subDateKey) {
+          Store.state.ui.selectedDate = subDateKey;
+        }
+        Store.save();
+        this.renderNavigation();
+        this.renderCurrentView();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      renderNavigation() {
+        const current = Store.state.ui.currentTab;
+        const desktopNav = document.getElementById('desktop-nav');
+        const mobileNav = document.getElementById('mobile-nav');
+
+        desktopNav.innerHTML = this.navItems.map(item => {
+          const active = current === item.id;
+          return `
+            <button onclick="App.navigate('${item.id}')" class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition ${
+              active
+                ? 'bg-[#EAF1FF] text-[#155EEF]'
+                : 'text-[#667085] hover:bg-[#F5F8FC] hover:text-[#172B4D]'
+            }">
+              <i data-lucide="${item.icon}" class="w-4 h-4 ${active ? 'text-[#155EEF]' : 'text-[#667085]'}"></i>
+              <span>${item.label}</span>
+              ${item.id === 'workout' && Store.state.activeSession ? '<span class="ml-auto w-2 h-2 rounded-full bg-[#12B76A]"></span>' : ''}
+            </button>
+          `;
+        }).join('') + `
+          <div class="pt-4 mt-4 border-t border-gray-100">
+            <p class="px-3.5 text-[10px] font-bold uppercase tracking-wider text-[#667085] mb-2">Training Tools</p>
+            <button onclick="App.navigate('library')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm font-semibold transition ${current === 'library' ? 'bg-[#EAF1FF] text-[#155EEF]' : 'text-[#667085] hover:bg-[#F5F8FC]'}">
+              <i data-lucide="book-open" class="w-4 h-4"></i>
+              <span>Exercise Library</span>
+            </button>
+            <button onclick="App.navigate('records')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm font-semibold transition ${current === 'records' ? 'bg-[#EAF1FF] text-[#155EEF]' : 'text-[#667085] hover:bg-[#F5F8FC]'}">
+              <i data-lucide="trophy" class="w-4 h-4"></i>
+              <span>Personal Records</span>
+            </button>
+            <button onclick="App.navigate('history')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm font-semibold transition ${current === 'history' ? 'bg-[#EAF1FF] text-[#155EEF]' : 'text-[#667085] hover:bg-[#F5F8FC]'}">
+              <i data-lucide="history" class="w-4 h-4"></i>
+              <span>Workout History</span>
+            </button>
+          </div>
+        `;
+
+        mobileNav.innerHTML = this.navItems.map(item => {
+          const active = current === item.id || (item.id === 'profile' && ['library', 'records', 'history'].includes(current));
+          return `
+            <button onclick="App.navigate('${item.id}')" class="flex flex-col items-center justify-center gap-1 relative ${
+              active ? 'text-[#155EEF]' : 'text-[#667085]'
+            }">
+              <i data-lucide="${item.icon}" class="w-5 h-5"></i>
+              <span class="text-[11px] font-semibold">${item.label}</span>
+              ${item.id === 'workout' && Store.state.activeSession ? '<span class="absolute top-2 right-1/3 w-2 h-2 rounded-full bg-[#12B76A]"></span>' : ''}
+            </button>
+          `;
+        }).join('');
+
+        lucide.createIcons();
+      },
+
+      renderHeaderMeta() {
+        const todayKey = DateUtils.toKey(new Date());
+        const sched = Scheduler.getScheduleForDate(todayKey);
+        const phaseEl = document.getElementById('header-phase-badge');
+        const dateEl = document.getElementById('header-date-desktop');
+        if (phaseEl) {
+          phaseEl.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-[#155EEF]"></span> ${sched.phase}`;
+        }
+        if (dateEl) {
+          dateEl.textContent = DateUtils.formatDisplay(todayKey, { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        this.updateTimerDisplays();
+      },
+
+      renderCurrentView() {
+        const tab = Store.state.ui.currentTab;
+        const main = document.getElementById('app-main');
+
+        // Destroy any existing chart instances before re-rendering DOM
+        Object.values(this.charts).forEach(ch => { if (ch && ch.destroy) ch.destroy(); });
+        this.charts = {};
+
+        if (tab === 'home') main.innerHTML = this.viewHome();
+        else if (tab === 'workout') main.innerHTML = this.viewWorkout();
+        else if (tab === 'calendar') main.innerHTML = this.viewCalendar();
+        else if (tab === 'analytics') main.innerHTML = this.viewAnalytics();
+        else if (tab === 'profile') main.innerHTML = this.viewProfile();
+        else if (tab === 'library') main.innerHTML = this.viewLibrary();
+        else if (tab === 'records') main.innerHTML = this.viewRecords();
+        else if (tab === 'history') main.innerHTML = this.viewHistory();
+
+        lucide.createIcons();
+
+        if (tab === 'analytics') {
+          setTimeout(() => this.mountAnalyticsCharts(), 30);
+        }
+      },
+
+      // --- LIVE WORKOUT CLOCK & REST TIMER ---
+      tickWorkoutClock() {
+        const active = Store.state.activeSession;
+        const pill = document.getElementById('header-active-session-pill');
+        const clockEl = document.getElementById('header-session-clock');
+        const execClockEl = document.getElementById('exec-session-timer');
+
+        if (active) {
+          const elapsed = this.getActiveSessionSeconds(active);
+          const formatted = this.formatDuration(elapsed);
+          if (pill) {
+            pill.classList.remove('hidden');
+            pill.classList.add('flex');
+          }
+          if (clockEl) clockEl.textContent = formatted;
+          if (execClockEl) execClockEl.textContent = formatted;
+        } else if (pill) {
+          pill.classList.add('hidden');
+          pill.classList.remove('flex');
+        }
+      },
+
+      getActiveSessionSeconds(session) {
+        if (!session) return 0;
+        if (session.paused) return session.accumulatedSeconds || 0;
+        return (session.accumulatedSeconds || 0) + Math.floor((Date.now() - session.resumedAt) / 1000);
+      },
+
+      formatDuration(sec) {
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      },
+
+      setRestPreset(seconds) {
+        this.restTimer.preset = seconds;
+        this.restTimer.remaining = seconds;
+        this.restTimer.running = false;
+        if (this.restTimer.intervalId) clearInterval(this.restTimer.intervalId);
+        this.updateTimerDisplays();
+      },
+
+      toggleRestTimer() {
+        if (this.restTimer.running) {
+          this.restTimer.running = false;
+          clearInterval(this.restTimer.intervalId);
+        } else {
+          if (this.restTimer.remaining <= 0) this.restTimer.remaining = this.restTimer.preset;
+          this.restTimer.running = true;
+          this.restTimer.intervalId = setInterval(() => {
+            this.restTimer.remaining--;
+            this.updateTimerDisplays();
+            if (this.restTimer.remaining <= 0) {
+              this.restTimer.running = false;
+              clearInterval(this.restTimer.intervalId);
+              this.triggerTimerAlert();
+            }
+          }, 1000);
+        }
+        this.updateTimerDisplays();
+      },
+
+      resetRestTimer() {
+        this.restTimer.running = false;
+        if (this.restTimer.intervalId) clearInterval(this.restTimer.intervalId);
+        this.restTimer.remaining = this.restTimer.preset;
+        this.updateTimerDisplays();
+      },
+
+      updateTimerDisplays() {
+        const m = Math.floor(Math.max(0, this.restTimer.remaining) / 60);
+        const s = Math.max(0, this.restTimer.remaining) % 60;
+        const text = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+
+        const hText = document.getElementById('header-timer-text');
+        const sDisp = document.getElementById('sidebar-timer-display');
+        const sBtn = document.getElementById('sidebar-timer-btn');
+        const mDisp = document.getElementById('modal-timer-display');
+        const mBtn = document.getElementById('modal-timer-toggle');
+
+        if (hText) hText.textContent = text;
+        if (sDisp) sDisp.textContent = text;
+        if (sBtn) sBtn.textContent = this.restTimer.running ? 'Pause' : 'Start';
+        if (mDisp) mDisp.textContent = text;
+        if (mBtn) mBtn.textContent = this.restTimer.running ? 'Pause Timer' : 'Start Timer';
+      },
+
+      triggerTimerAlert() {
+        this.showToast('Rest complete! Ready for your next working set.', 'success');
+        if (navigator.vibrate) {
+          try { navigator.vibrate([200, 100, 200]); } catch (e) {}
+        }
+        if (Store.state.profile.soundEnabled) {
+          try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(880, ctx.currentTime);
+            gain.gain.setValueAtTime(0.15, ctx.currentTime);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.28);
+          } catch (e) {}
+        }
+      },
+
+      openTimerModal() {
+        const presets = [60, 90, 120, 180];
+        this.openModal(`
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-base font-bold text-[#172B4D] flex items-center gap-2">
+                <i data-lucide="timer" class="w-5 h-5 text-[#155EEF]"></i> Rest Timer
+              </h3>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100">
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+            <div class="bg-[#F5F8FC] border border-gray-200 rounded-2xl p-6 text-center mb-4">
+              <div id="modal-timer-display" class="text-5xl font-extrabold tracking-tight text-[#172B4D] tabular-nums">
+                ${String(Math.floor(this.restTimer.remaining / 60)).padStart(2, '0')}:${String(this.restTimer.remaining % 60).padStart(2, '0')}
+              </div>
+              <p class="text-xs font-medium text-[#667085] mt-2">Runs continuously while you log sets</p>
+            </div>
+            <div class="grid grid-cols-4 gap-2 mb-4">
+              ${presets.map(p => `
+                <button onclick="App.setRestPreset(${p}); App.openTimerModal();" class="py-2.5 rounded-xl text-xs font-bold border transition ${
+                  this.restTimer.preset === p
+                    ? 'bg-[#EAF1FF] border-[#155EEF] text-[#155EEF]'
+                    : 'bg-white border-gray-200 text-[#667085] hover:text-[#172B4D]'
+                }">${p}s</button>
+              `).join('')}
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <button id="modal-timer-toggle" onclick="App.toggleRestTimer()" class="py-3 rounded-xl bg-[#155EEF] text-white font-bold text-sm hover:bg-[#2970FF] transition">
+                ${this.restTimer.running ? 'Pause Timer' : 'Start Timer'}
+              </button>
+              <button onclick="App.resetRestTimer()" class="py-3 rounded-xl bg-gray-100 text-[#172B4D] font-bold text-sm hover:bg-gray-200 transition">
+                Reset
+              </button>
+            </div>
+          </div>
+        `);
+      },
+
+      // ============================================================================
+      // VIEW 1: DASHBOARD / HOME PAGE
+      // ============================================================================
+      viewHome() {
+        const todayKey = DateUtils.toKey(new Date());
+        const sched = Scheduler.getScheduleForDate(todayKey);
+        const dayStatus = Scheduler.getDayStatus(todayKey);
+        const att = AnalyticsEngine.getAttendanceMetrics();
+        const wrk = AnalyticsEngine.getWorkoutMetrics();
+
+        // Determine Greeting
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+        // Weekly overview (Monday through Sunday of current week)
+        const weekMonday = DateUtils.getMondayOfWeek(todayKey);
+        const weekDays = Array.from({ length: 7 }, (_, idx) => {
+          const dk = DateUtils.addDays(weekMonday, idx);
+          return Scheduler.getDayStatus(dk);
+        });
+
+        // Today's exercise count & progress
+        const activeSession = Store.state.activeSession;
+        const todaySession = dayStatus.session;
+        const exerciseCount = todaySession ? todaySession.exercises.length : sched.template.exercises.length;
+        let completedExCount = 0;
+        if (todaySession) {
+          completedExCount = todaySession.exercises.filter(ex => ex.sets.every(s => s.completed) && !ex.skipped).length;
+        }
+        const progressPct = exerciseCount > 0 ? Math.round((completedExCount / exerciseCount) * 100) : 0;
+
+        // Daily Routine state for today
+        const routine = this.getOrInitDailyRoutine(todayKey, sched.template);
+
+        return `
+          <!-- Greeting & Phase Header -->
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2 mb-1">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#EAF1FF] text-[#155EEF]">
+                  ${sched.phase}
+                </span>
+                <span class="text-xs font-medium text-[#667085] lg:hidden">${DateUtils.formatDisplay(todayKey, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+              </div>
+              <h1 class="text-xl sm:text-2xl font-extrabold text-[#172B4D] tracking-tight">${greeting}, ${Store.state.profile.name}</h1>
+              <p class="text-xs sm:text-sm text-[#667085] mt-0.5">Goal: Weight gain & hypertrophy • Current weight: <strong class="text-[#172B4D]">${Store.state.profile.weightKg} kg</strong></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button onclick="App.openRecoveryModal('${todayKey}')" class="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D] hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs">
+                <i data-lucide="heart-pulse" class="w-4 h-4 text-[#155EEF]"></i>
+                Recovery Check-In
+              </button>
+              <button onclick="App.openScheduleEditorModal('${todayKey}')" class="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D] hover:bg-gray-50 flex items-center gap-1.5 shadow-2xs">
+                <i data-lucide="calendar-cog" class="w-4 h-4 text-[#667085]"></i>
+                Edit Split
+              </button>
+            </div>
+          </div>
+
+          <!-- A. TODAY'S WORKOUT CARD -->
+          <section class="ft-card p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold uppercase tracking-wider text-[#155EEF]">${DateUtils.getDayName(todayKey)} • Today's Session</span>
+                  ${dayStatus.attended ? '<span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#12B76A]/10 text-[#12B76A]">Gym Visit Recorded</span>' : ''}
+                </div>
+                <h2 class="text-xl font-extrabold text-[#172B4D] mt-1">${sched.template.name}</h2>
+                <p class="text-sm text-[#667085] mt-0.5">${sched.template.muscles}</p>
+              </div>
+              <div class="flex items-center gap-3 text-xs font-semibold text-[#667085] bg-[#F5F8FC] px-3 py-2 rounded-xl border border-gray-200/70">
+                <span class="flex items-center gap-1"><i data-lucide="list-checks" class="w-4 h-4 text-[#155EEF]"></i> ${exerciseCount} Exercises</span>
+                <span>•</span>
+                <span class="flex items-center gap-1"><i data-lucide="clock" class="w-4 h-4 text-[#155EEF]"></i> ${sched.template.estDuration}</span>
+              </div>
+            </div>
+
+            ${!sched.template.isRest ? `
+              <!-- Progress Bar -->
+              <div class="mt-4">
+                <div class="flex justify-between text-xs font-semibold mb-1.5">
+                  <span class="text-[#667085]">Exercise Completion</span>
+                  <span class="text-[#172B4D]">${completedExCount} / ${exerciseCount} Completed (${progressPct}%)</span>
+                </div>
+                <div class="w-full h-2.5 bg-[#EAF1FF] rounded-full overflow-hidden">
+                  <div class="h-full bg-[#155EEF] rounded-full transition-all duration-300" style="width: ${progressPct}%"></div>
+                </div>
+              </div>
+
+              <!-- Primary Action Buttons -->
+              <div class="mt-5 flex flex-wrap items-center gap-3">
+                ${activeSession ? `
+                  <button onclick="App.navigate('workout')" class="flex-1 sm:flex-none px-5 py-3 rounded-xl bg-[#12B76A] hover:bg-[#0E9F5C] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    Resume Workout (${activeSession.workoutName})
+                  </button>
+                ` : `
+                  <button onclick="App.startWorkout('${todayKey}')" class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-[#155EEF] hover:bg-[#2970FF] text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition">
+                    <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                    ${dayStatus.code === 'completed' ? 'Start Another Session' : 'Start Workout'}
+                  </button>
+                `}
+                <button onclick="App.navigate('workout', '${todayKey}')" class="px-4 py-3 rounded-xl bg-[#EAF1FF] hover:bg-[#D9E6FF] text-[#155EEF] font-bold text-sm transition">
+                  View Workout Plan
+                </button>
+              </div>
+            ` : `
+              <div class="mt-4 p-4 rounded-xl bg-[#F5F8FC] border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p class="text-sm font-bold text-[#172B4D]">Scheduled Sunday Recovery</p>
+                  <p class="text-xs text-[#667085] mt-0.5">Focus on sleep, hydration, and light mobility to grow from this week's training.</p>
+                </div>
+                <button onclick="App.navigate('workout', '${todayKey}')" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#155EEF] hover:bg-[#EAF1FF]">
+                  View Rest Day Summary
+                </button>
+              </div>
+            `}
+          </section>
+
+          <!-- DAILY ROUTINE TRACKER (Separate from Main Exercises: Cycling, Push-ups, Abs, Forearms on Pull Days) -->
+          ${this.renderDailyRoutineCard(todayKey, sched.template, routine)}
+
+          <!-- B. PERFORMANCE OVERVIEW (Real Saved Data Only) -->
+          <section>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-[#172B4D]">Performance Overview</h3>
+              <span class="text-[11px] font-medium text-[#667085]">Live recorded metrics</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Visits This Month</span>
+                <span class="text-2xl font-extrabold text-[#172B4D] mt-1 block">${att.visitsThisMonth}</span>
+                <span class="text-[11px] font-semibold text-[#155EEF] mt-0.5 block">${att.monthlyAttendancePct}% consistency</span>
+              </div>
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Completed Workouts</span>
+                <span class="text-2xl font-extrabold text-[#172B4D] mt-1 block">${wrk.completedWorkouts}</span>
+                <span class="text-[11px] font-medium text-[#667085] mt-0.5 block">Total finished</span>
+              </div>
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Current Streak</span>
+                <span class="text-2xl font-extrabold text-[#12B76A] mt-1 block">${att.currentStreak}d</span>
+                <span class="text-[11px] font-medium text-[#667085] mt-0.5 block">Active run</span>
+              </div>
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Longest Streak</span>
+                <span class="text-2xl font-extrabold text-[#172B4D] mt-1 block">${att.longestStreak}d</span>
+                <span class="text-[11px] font-medium text-[#667085] mt-0.5 block">All-time best</span>
+              </div>
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Weekly Attendance</span>
+                <span class="text-2xl font-extrabold text-[#172B4D] mt-1 block">${att.weeklyVisits}/${att.weeklyPlanned}</span>
+                <span class="text-[11px] font-medium text-[#667085] mt-0.5 block">This week</span>
+              </div>
+              <div class="ft-card p-3.5">
+                <span class="text-[11px] font-semibold text-[#667085] block">Exercise Completion</span>
+                <span class="text-2xl font-extrabold text-[#155EEF] mt-1 block">${wrk.exerciseCompletionPct}%</span>
+                <span class="text-[11px] font-medium text-[#667085] mt-0.5 block">${wrk.totalCompletedExercises}/${wrk.totalPlannedExercises} ex</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- C. WEEKLY WORKOUT OVERVIEW (Monday through Sunday) -->
+          <section class="ft-card p-5">
+            <div class="flex items-center justify-between mb-3.5">
+              <div>
+                <h3 class="text-sm font-bold text-[#172B4D]">Weekly Workout Schedule</h3>
+                <p class="text-xs text-[#667085]">${sched.phase} • Click any day to inspect or edit</p>
+              </div>
+              <button onclick="App.navigate('calendar')" class="text-xs font-bold text-[#155EEF] hover:underline">Full Calendar →</button>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-2.5">
+              ${weekDays.map(d => {
+                const isToday = d.sched.dateKey === todayKey;
+                const badgeStyles = {
+                  completed: 'bg-[#12B76A]/10 text-[#12B76A]',
+                  in_progress: 'bg-[#155EEF]/10 text-[#155EEF]',
+                  partial: 'bg-amber-100 text-amber-700',
+                  missed: 'bg-red-100 text-red-600',
+                  rest: 'bg-gray-100 text-[#667085]',
+                  today: 'bg-[#EAF1FF] text-[#155EEF]',
+                  upcoming: 'bg-gray-100 text-[#667085]'
+                };
+                return `
+                  <div onclick="App.navigate('workout', '${d.sched.dateKey}')" class="cursor-pointer p-3 rounded-xl border transition flex flex-col justify-between ${
+                    isToday ? 'border-[#155EEF] bg-[#EAF1FF]/35 ring-1 ring-[#155EEF]/20' : 'border-gray-200 bg-white hover:border-[#155EEF]/50'
+                  }">
+                    <div>
+                      <div class="flex items-center justify-between mb-1">
+                        <span class="text-[11px] font-bold ${isToday ? 'text-[#155EEF]' : 'text-[#667085]'}">
+                          ${DateUtils.formatDisplay(d.sched.dateKey, { weekday: 'short', day: 'numeric' })}
+                        </span>
+                        ${d.attended ? '<span title="Gym Attended" class="w-2 h-2 rounded-full bg-[#155EEF]"></span>' : ''}
+                      </div>
+                      <p class="text-xs font-extrabold text-[#172B4D] leading-snug">${d.sched.template.shortName}</p>
+                      <p class="text-[11px] text-[#667085] line-clamp-2 mt-1">${d.sched.template.muscles}</p>
+                    </div>
+                    <div class="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+                      <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${badgeStyles[d.code] || badgeStyles.upcoming}">
+                        ${d.label}
+                      </span>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- D. QUICK ACTIONS -->
+          <section>
+            <h3 class="text-sm font-bold text-[#172B4D] mb-3">Quick Actions</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <button onclick="${activeSession ? `App.navigate('workout')` : `App.startWorkout('${todayKey}')`}" class="ft-card p-3.5 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                  <i data-lucide="play-circle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[#172B4D] block">${activeSession ? 'Resume Session' : "Start Today's"}</span>
+                  <span class="text-[11px] text-[#667085]">Live tracker</span>
+                </div>
+              </button>
+
+              <button onclick="App.navigate('calendar')" class="ft-card p-3.5 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                  <i data-lucide="calendar" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[#172B4D] block">Monthly Calendar</span>
+                  <span class="text-[11px] text-[#667085]">Attendance & logs</span>
+                </div>
+              </button>
+
+              <button onclick="App.navigate('analytics')" class="ft-card p-3.5 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                  <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[#172B4D] block">View Analytics</span>
+                  <span class="text-[11px] text-[#667085]">Strength & volume</span>
+                </div>
+              </button>
+
+              <button onclick="App.navigate('records')" class="ft-card p-3.5 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                  <i data-lucide="trophy" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-bold text-[#172B4D] block">Personal Records</span>
+                  <span class="text-[11px] text-[#667085]">Best lifts</span>
+                </div>
+              </button>
+            </div>
+          </section>
+        `;
+      },
+
+      // --- DAILY ROUTINE TRACKER HELPER ---
+      getOrInitDailyRoutine(dateKey, template) {
+        if (!Store.state.dailyRoutines[dateKey]) {
+          Store.state.dailyRoutines[dateKey] = {
+            cycling: { completed: false, minutes: 6 },
+            pushups: { set1Done: false, set1Reps: 15, set2Done: false, set2Reps: 15, skippedSoreness: false },
+            abs: {
+              exerciseId: template?.absExercise || 'plank',
+              setsCompleted: 0,
+              repsOrSec: '',
+              completed: false
+            },
+            forearms: { revWristDone: false, wristDone: false }
+          };
+          Store.save();
+        }
+        return Store.state.dailyRoutines[dateKey];
+      },
+
+      renderDailyRoutineCard(dateKey, template, routine) {
+        const isPullDay = template.id === 'PULL_A' || template.id === 'PULL_B';
+        const absEx = EXERCISE_DB.find(e => e.id === (template.absExercise || routine.abs.exerciseId)) || EXERCISE_DB.find(e => e.id === 'plank');
+        const recoveryToday = Store.state.recoveryLogs[dateKey];
+        const hasChestShoulderSoreness = recoveryToday && Number(recoveryToday.soreness) >= 4;
+
+        return `
+          <section class="ft-card p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3.5">
+              <div>
+                <h3 class="text-sm font-bold text-[#172B4D]">Daily Routine Tracker</h3>
+                <p class="text-xs text-[#667085]">Tracked separately from main compound & isolation lifts</p>
+              </div>
+              <span class="text-[11px] font-semibold text-[#155EEF] bg-[#EAF1FF] px-2.5 py-1 rounded-full">
+                ${DateUtils.formatDisplay(dateKey, { month: 'short', day: 'numeric' })}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 ${isPullDay ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-3">
+              <!-- A. Cycling Warm-up -->
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-[#172B4D] flex items-center gap-1.5">
+                      <i data-lucide="bike" class="w-4 h-4 text-[#155EEF]"></i> Cycling Warm-up
+                    </span>
+                    <input type="checkbox" ${routine.cycling.completed ? 'checked' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'cycling_toggle', this.checked)" class="w-5 h-5 rounded accent-[#155EEF] cursor-pointer" />
+                  </div>
+                  <p class="text-[11px] text-[#667085] mt-1">Target: 5–7 minutes daily gym warm-up</p>
+                </div>
+                <div class="mt-3 flex items-center gap-2">
+                  <input type="number" min="1" max="60" value="${routine.cycling.minutes || 6}" onchange="App.updateDailyRoutine('${dateKey}', 'cycling_min', this.value)" class="ft-input w-16 px-2 py-1 text-xs text-center" />
+                  <span class="text-xs text-[#667085]">minutes</span>
+                </div>
+              </div>
+
+              <!-- B. Daily Push-ups (2 x 15, skip if sore) -->
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-[#172B4D] flex items-center gap-1.5">
+                      <i data-lucide="activity" class="w-4 h-4 text-[#155EEF]"></i> Push-ups (2 × 15)
+                    </span>
+                    ${routine.pushups.skippedSoreness
+                      ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-100 text-amber-700">Skipped (Sore)</span>'
+                      : (routine.pushups.set1Done && routine.pushups.set2Done ? '<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-[#12B76A]/15 text-[#12B76A]">Done</span>' : '')
+                    }
+                  </div>
+                  ${hasChestShoulderSoreness ? '<p class="text-[11px] text-amber-700 mt-1 font-medium">High soreness logged — skip push-ups if chest/shoulders are sore.</p>' : '<p class="text-[11px] text-[#667085] mt-1">Skip if chest or shoulders feel sore</p>'}
+                </div>
+
+                <div class="mt-2.5 space-y-1.5">
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <label class="flex items-center gap-1.5 font-semibold text-[#172B4D] cursor-pointer">
+                      <input type="checkbox" ${routine.pushups.set1Done ? 'checked' : ''} ${routine.pushups.skippedSoreness ? 'disabled' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'pu_s1', this.checked)" class="w-4 h-4 rounded accent-[#155EEF]" />
+                      Set 1
+                    </label>
+                    <div class="flex items-center gap-1">
+                      <input type="number" value="${routine.pushups.set1Reps}" onchange="App.updateDailyRoutine('${dateKey}', 'pu_r1', this.value)" class="ft-input w-12 px-1.5 py-0.5 text-xs text-center" />
+                      <span class="text-[11px] text-[#667085]">reps</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between gap-2 text-xs">
+                    <label class="flex items-center gap-1.5 font-semibold text-[#172B4D] cursor-pointer">
+                      <input type="checkbox" ${routine.pushups.set2Done ? 'checked' : ''} ${routine.pushups.skippedSoreness ? 'disabled' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'pu_s2', this.checked)" class="w-4 h-4 rounded accent-[#155EEF]" />
+                      Set 2
+                    </label>
+                    <div class="flex items-center gap-1">
+                      <input type="number" value="${routine.pushups.set2Reps}" onchange="App.updateDailyRoutine('${dateKey}', 'pu_r2', this.value)" class="ft-input w-12 px-1.5 py-0.5 text-xs text-center" />
+                      <span class="text-[11px] text-[#667085]">reps</span>
+                    </div>
+                  </div>
+                  <button onclick="App.updateDailyRoutine('${dateKey}', 'pu_skip', ${!routine.pushups.skippedSoreness})" class="text-[11px] font-semibold text-[#667085] hover:text-[#172B4D] underline pt-0.5">
+                    ${routine.pushups.skippedSoreness ? 'Re-enable push-ups' : 'Skip due to chest/shoulder soreness'}
+                  </button>
+                </div>
+              </div>
+
+              <!-- C. Prescribed Daily Abs -->
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-[#172B4D] flex items-center gap-1.5">
+                      <i data-lucide="shield" class="w-4 h-4 text-[#155EEF]"></i> Daily Abs
+                    </span>
+                    <input type="checkbox" ${routine.abs.completed ? 'checked' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'abs_done', this.checked)" class="w-5 h-5 rounded accent-[#155EEF] cursor-pointer" />
+                  </div>
+                  <p class="text-xs font-bold text-[#155EEF] mt-1">${absEx.name}</p>
+                  <p class="text-[11px] text-[#667085]">Target: ${absEx.defaultSets} × ${absEx.defaultReps}</p>
+                </div>
+                <div class="mt-2.5 flex items-center gap-2">
+                  <input type="text" placeholder="e.g. 3x15" value="${routine.abs.repsOrSec || `${absEx.defaultSets}×${absEx.defaultReps}`}" onchange="App.updateDailyRoutine('${dateKey}', 'abs_val', this.value)" class="ft-input w-full px-2.5 py-1 text-xs" />
+                </div>
+              </div>
+
+              <!-- D. Forearms (Only on Pull A & Pull B) -->
+              ${isPullDay ? `
+                <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex flex-col justify-between">
+                  <div>
+                    <span class="text-xs font-bold text-[#172B4D] flex items-center gap-1.5">
+                      <i data-lucide="grip" class="w-4 h-4 text-[#155EEF]"></i> Forearms (Pull Day)
+                    </span>
+                    <p class="text-[11px] text-[#667085] mt-1">Tracked separately on Pull A & B</p>
+                  </div>
+                  <div class="mt-2.5 space-y-2 text-xs">
+                    <label class="flex items-center justify-between font-semibold text-[#172B4D] cursor-pointer">
+                      <span>Reverse Wrist Curl (2×15)</span>
+                      <input type="checkbox" ${routine.forearms.revWristDone ? 'checked' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'fa_rev', this.checked)" class="w-4 h-4 rounded accent-[#155EEF]" />
+                    </label>
+                    <label class="flex items-center justify-between font-semibold text-[#172B4D] cursor-pointer">
+                      <span>Wrist Curl (2×15)</span>
+                      <input type="checkbox" ${routine.forearms.wristDone ? 'checked' : ''} onchange="App.updateDailyRoutine('${dateKey}', 'fa_wrist', this.checked)" class="w-4 h-4 rounded accent-[#155EEF]" />
+                    </label>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </section>
+        `;
+      },
+
+      updateDailyRoutine(dateKey, field, val) {
+        const sched = Scheduler.getScheduleForDate(dateKey);
+        const r = this.getOrInitDailyRoutine(dateKey, sched.template);
+        if (field === 'cycling_toggle') r.cycling.completed = Boolean(val);
+        if (field === 'cycling_min') r.cycling.minutes = Number(val) || 5;
+        if (field === 'pu_s1') r.pushups.set1Done = Boolean(val);
+        if (field === 'pu_s2') r.pushups.set2Done = Boolean(val);
+        if (field === 'pu_r1') r.pushups.set1Reps = Number(val) || 0;
+        if (field === 'pu_r2') r.pushups.set2Reps = Number(val) || 0;
+        if (field === 'pu_skip') {
+          r.pushups.skippedSoreness = Boolean(val);
+          if (val) { r.pushups.set1Done = false; r.pushups.set2Done = false; }
+        }
+        if (field === 'abs_done') r.abs.completed = Boolean(val);
+        if (field === 'abs_val') r.abs.repsOrSec = String(val);
+        if (field === 'fa_rev') r.forearms.revWristDone = Boolean(val);
+        if (field === 'fa_wrist') r.forearms.wristDone = Boolean(val);
+
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      // ============================================================================
+      // VIEW 2: WORKOUT PLAN & LIVE WORKOUT EXECUTION SCREEN
+      // ============================================================================
+      viewWorkout() {
+        const active = Store.state.activeSession;
+        if (active) {
+          return this.viewWorkoutExecution(active);
+        }
+
+        const selectedDate = Store.state.ui.selectedDate || DateUtils.toKey(new Date());
+        const sched = Scheduler.getScheduleForDate(selectedDate);
+        const dayStatus = Scheduler.getDayStatus(selectedDate);
+        const routine = this.getOrInitDailyRoutine(selectedDate, sched.template);
+
+        // Check if there is an already saved session on selectedDate (like Transition Monday)
+        const existingSession = Store.state.sessions.find(s => s.date === selectedDate);
+
+        if (sched.template.isRest && !existingSession) {
+          return this.viewSundayRestScreen(selectedDate, sched);
+        }
+
+        const exercisesToShow = existingSession
+          ? existingSession.exercises
+          : sched.template.exercises.map(exId => this.buildExerciseEntry(exId, sched.template));
+
+        return `
+          <!-- Top Date & Split Selector Bar -->
+          <div class="ft-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-[#155EEF]">${DateUtils.formatDisplay(selectedDate, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#EAF1FF] text-[#155EEF]">${sched.phase}</span>
+              </div>
+              <h1 class="text-xl font-extrabold text-[#172B4D] mt-1">${sched.template.name}</h1>
+              <p class="text-xs text-[#667085]">${sched.template.muscles} • ${sched.template.estDuration}</p>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              ${sched.template.isMixed ? `
+                <button onclick="App.openMixedDayEditorModal('${selectedDate}')" class="px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D] hover:bg-gray-50 flex items-center gap-1.5">
+                  <i data-lucide="edit-3" class="w-4 h-4 text-[#155EEF]"></i>
+                  Edit Mixed Exercises
+                </button>
+              ` : ''}
+              <button onclick="App.openScheduleEditorModal('${selectedDate}')" class="px-3.5 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D] hover:bg-gray-50 flex items-center gap-1.5">
+                <i data-lucide="repeat" class="w-4 h-4 text-[#667085]"></i>
+                Change Day Split
+              </button>
+              <button onclick="App.startWorkout('${selectedDate}')" class="px-5 py-2.5 rounded-xl bg-[#155EEF] hover:bg-[#2970FF] text-white font-bold text-sm flex items-center gap-2 shadow-sm">
+                <i data-lucide="play" class="w-4 h-4 fill-current"></i>
+                ${existingSession ? 'Re-run / New Session' : 'Start Workout'}
+              </button>
+            </div>
+          </div>
+
+          ${existingSession ? `
+            <div class="ft-card p-4 bg-[#12B76A]/5 border-[#12B76A]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-[#12B76A]/15 text-[#12B76A] flex items-center justify-center shrink-0">
+                  <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <p class="text-sm font-bold text-[#172B4D]">Workout Logged (${existingSession.status === 'completed' ? 'Completed' : 'Partial'})</p>
+                  <p class="text-xs text-[#667085]">Duration: ${Math.round((existingSession.durationSeconds || 0) / 60)} min • ${existingSession.notes || 'Recorded in history'}</p>
+                </div>
+              </div>
+              <button onclick="App.editHistoricalSession('${existingSession.id}')" class="px-4 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#155EEF] hover:bg-[#EAF1FF]">
+                Edit Recorded Sets & Weights
+              </button>
+            </div>
+          ` : ''}
+
+          <!-- Daily Routine Tracker -->
+          ${this.renderDailyRoutineCard(selectedDate, sched.template, routine)}
+
+          <!-- Planned Exercises Preview List -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold text-[#172B4D]">Prescribed Exercises (${exercisesToShow.length})</h2>
+              <span class="text-xs text-[#667085]">1 Warm-up + Working sets per exercise</span>
+            </div>
+
+            ${exercisesToShow.map((ex, i) => {
+              const meta = EXERCISE_DB.find(e => e.id === ex.exerciseId) || {};
+              const lastWeight = this.getLastUsedWeight(ex.exerciseId);
+              return `
+                <div class="ft-card p-4 flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-3.5 min-w-0">
+                    <div class="w-12 h-12 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex items-center justify-center shrink-0">
+                      ${EXERCISE_ILLUSTRATIONS[meta.icon || 'chest']}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-[#155EEF]">#${i + 1}</span>
+                        <h3 class="text-sm font-bold text-[#172B4D] truncate">${ex.name}</h3>
+                      </div>
+                      <p class="text-xs text-[#667085] mt-0.5">${ex.primary} • 1 Warm-up + ${ex.sets.length} sets × ${ex.targetReps}</p>
+                      ${lastWeight ? `<span class="inline-block mt-1 text-[11px] font-semibold text-[#155EEF] bg-[#EAF1FF] px-2 py-0.5 rounded">Last best: ${lastWeight} kg</span>` : ''}
+                    </div>
+                  </div>
+                  <button onclick="App.openExerciseDetailModal('${ex.exerciseId}')" class="px-3 py-2 rounded-xl bg-[#F5F8FC] hover:bg-[#EAF1FF] text-xs font-bold text-[#172B4D] hover:text-[#155EEF] shrink-0">
+                    Form Guide
+                  </button>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      },
+
+      // --- LIVE WORKOUT EXECUTION SCREEN ---
+      viewWorkoutExecution(session) {
+        const totalSets = session.exercises.reduce((acc, ex) => ex.skipped ? acc : acc + ex.sets.length, 0);
+        const completedSets = session.exercises.reduce((acc, ex) => ex.skipped ? acc : acc + ex.sets.filter(s => s.completed).length, 0);
+        const completedExercises = session.exercises.filter(ex => !ex.skipped && ex.sets.every(s => s.completed)).length;
+        const pct = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
+        const elapsed = this.getActiveSessionSeconds(session);
+
+        const sched = Scheduler.getScheduleForDate(session.date);
+        const routine = this.getOrInitDailyRoutine(session.date, sched.template);
+
+        return `
+          <!-- Sticky Execution Header -->
+          <div class="ft-card p-4 sm:p-5 border-[#155EEF]/30 bg-white">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${session.paused ? 'bg-amber-100 text-amber-700' : 'bg-[#12B76A]/15 text-[#12B76A]'}">
+                    <span class="w-1.5 h-1.5 rounded-full ${session.paused ? 'bg-amber-500' : 'bg-[#12B76A] animate-pulse'}"></span>
+                    ${session.paused ? 'Session Paused' : 'Live Workout Active'}
+                  </span>
+                  <span class="text-xs font-semibold text-[#667085]">${DateUtils.formatDisplay(session.date, { month: 'short', day: 'numeric' })}</span>
+                </div>
+                <h1 class="text-lg sm:text-xl font-extrabold text-[#172B4D] mt-1">${session.workoutName}</h1>
+              </div>
+
+              <!-- Live Duration Clock -->
+              <div class="flex items-center gap-2 bg-[#F5F8FC] px-3.5 py-2 rounded-xl border border-gray-200">
+                <i data-lucide="clock" class="w-4 h-4 text-[#155EEF]"></i>
+                <span id="exec-session-timer" class="text-base font-extrabold text-[#172B4D] tabular-nums">${this.formatDuration(elapsed)}</span>
+              </div>
+            </div>
+
+            <!-- Overall Progress Bar -->
+            <div class="mt-4">
+              <div class="flex justify-between text-xs font-semibold mb-1.5">
+                <span class="text-[#667085]">${completedExercises}/${session.exercises.length} Exercises • ${completedSets}/${totalSets} Working Sets</span>
+                <span class="text-[#155EEF] font-bold">${pct}%</span>
+              </div>
+              <div class="w-full h-2.5 bg-[#EAF1FF] rounded-full overflow-hidden">
+                <div class="h-full bg-[#155EEF] rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+              </div>
+            </div>
+
+            <!-- Workout Controls -->
+            <div class="mt-4 pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <button onclick="App.togglePauseActiveWorkout()" class="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-[#172B4D] flex items-center gap-1.5">
+                  <i data-lucide="${session.paused ? 'play' : 'pause'}" class="w-3.5 h-3.5"></i>
+                  ${session.paused ? 'Resume' : 'Pause'}
+                </button>
+                <button onclick="App.openTimerModal()" class="px-3.5 py-2 rounded-xl bg-[#EAF1FF] text-xs font-bold text-[#155EEF] flex items-center gap-1.5">
+                  <i data-lucide="timer" class="w-3.5 h-3.5"></i>
+                  Rest Timer
+                </button>
+                <button onclick="App.confirmCancelWorkout()" class="px-3 py-2 rounded-xl text-xs font-bold text-red-600 hover:bg-red-50">
+                  Cancel
+                </button>
+              </div>
+              <button onclick="App.finishWorkout()" class="px-5 py-2.5 rounded-xl bg-[#12B76A] hover:bg-[#0E9F5C] text-white font-bold text-sm flex items-center gap-1.5 shadow-sm">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                Finish Workout
+              </button>
+            </div>
+          </div>
+
+          <!-- Daily Routine Tracker inside Execution View -->
+          ${this.renderDailyRoutineCard(session.date, sched.template, routine)}
+
+          <!-- Interactive Exercise Cards -->
+          <div class="space-y-3">
+            ${session.exercises.map((ex, exIdx) => {
+              const meta = EXERCISE_DB.find(e => e.id === ex.exerciseId) || {};
+              const lastWeight = this.getLastUsedWeight(ex.exerciseId);
+              const allDone = !ex.skipped && ex.sets.every(s => s.completed);
+              const expanded = ex.expanded !== false;
+
+              return `
+                <div class="ft-card overflow-hidden transition ${allDone ? 'border-[#12B76A]/50 bg-[#12B76A]/[0.02]' : ''}">
+                  <!-- Exercise Header -->
+                  <div onclick="App.toggleExerciseExpand(${exIdx})" class="p-4 flex items-center justify-between gap-3 cursor-pointer select-none">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <div class="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs shrink-0 ${
+                        allDone ? 'bg-[#12B76A] text-white' : ex.skipped ? 'bg-gray-200 text-gray-600' : 'bg-[#EAF1FF] text-[#155EEF]'
+                      }">
+                        ${allDone ? '✓' : exIdx + 1}
+                      </div>
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <h3 class="text-sm sm:text-base font-bold text-[#172B4D] truncate ${ex.skipped ? 'line-through text-gray-400' : ''}">${ex.name}</h3>
+                          ${ex.replacedFrom ? `<span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">Replaced</span>` : ''}
+                        </div>
+                        <p class="text-xs text-[#667085]">
+                          ${ex.primary} • Target: ${ex.sets.length} × ${ex.targetReps}
+                          ${lastWeight ? ` • <span class="text-[#155EEF] font-semibold">Last: ${lastWeight} kg</span>` : ''}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      <span class="text-xs font-bold ${allDone ? 'text-[#12B76A]' : 'text-[#667085]'}">
+                        ${ex.skipped ? 'Skipped' : `${ex.sets.filter(s => s.completed).length}/${ex.sets.length}`}
+                      </span>
+                      <i data-lucide="${expanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-[#667085]"></i>
+                    </div>
+                  </div>
+
+                  <!-- Expanded Set Logger -->
+                  ${expanded ? `
+                    <div class="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3">
+                      <!-- Quick Instructions & Actions -->
+                      <div class="flex flex-wrap items-center justify-between gap-2 bg-[#F5F8FC] p-2.5 rounded-xl text-xs">
+                        <span class="text-[#667085] flex-1 min-w-[200px]">${meta.instructions || 'Perform controlled reps with full range of motion.'}</span>
+                        <div class="flex items-center gap-1.5 shrink-0">
+                          <button onclick="App.openReplaceExerciseModal(${exIdx})" class="px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 font-semibold text-[#172B4D] hover:text-[#155EEF]">Replace</button>
+                          <button onclick="App.openSkipExerciseModal(${exIdx})" class="px-2.5 py-1.5 rounded-lg bg-white border border-gray-200 font-semibold text-[#667085] hover:text-red-600">
+                            ${ex.skipped ? 'Unskip' : 'Skip'}
+                          </button>
+                        </div>
+                      </div>
+
+                      ${ex.skipped ? `
+                        <div class="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800 flex items-center justify-between">
+                          <span>Skipped reason: <strong>${ex.skipReason || 'Not specified'}</strong></span>
+                          <button onclick="App.unskipExercise(${exIdx})" class="font-bold underline">Restore Exercise</button>
+                        </div>
+                      ` : `
+                        <!-- Warm-up Set -->
+                        <div class="p-2.5 rounded-xl bg-[#EAF1FF]/45 border border-[#155EEF]/15">
+                          <div class="grid grid-cols-12 items-center gap-2">
+                            <div class="col-span-3 sm:col-span-4">
+                              <span class="text-xs font-bold text-[#155EEF] block">Warm-up</span>
+                              <span class="text-[10px] text-[#667085]">Lighter feeler</span>
+                            </div>
+                            <div class="col-span-3">
+                              <input type="number" step="0.5" placeholder="kg" value="${ex.warmup.weight}" onchange="App.updateSetField(${exIdx}, 'warmup', 'weight', this.value)" class="ft-input w-full py-2 px-2 text-center text-sm" />
+                            </div>
+                            <div class="col-span-3">
+                              <input type="number" placeholder="Reps" value="${ex.warmup.reps}" onchange="App.updateSetField(${exIdx}, 'warmup', 'reps', this.value)" class="ft-input w-full py-2 px-2 text-center text-sm" />
+                            </div>
+                            <div class="col-span-3 sm:col-span-2 flex justify-end">
+                              <button onclick="App.toggleSetComplete(${exIdx}, 'warmup')" class="w-full py-2 rounded-lg font-bold text-xs transition flex items-center justify-center ${
+                                ex.warmup.completed ? 'bg-[#155EEF] text-white' : 'bg-white border border-gray-300 text-[#667085]'
+                              }">
+                                ${ex.warmup.completed ? 'Done ✓' : 'Done'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Working Sets Header -->
+                        <div class="grid grid-cols-12 gap-2 px-2 text-[11px] font-bold uppercase tracking-wider text-[#667085]">
+                          <div class="col-span-3 sm:col-span-4">Set</div>
+                          <div class="col-span-3 text-center">Weight (kg)</div>
+                          <div class="col-span-3 text-center">Reps</div>
+                          <div class="col-span-3 sm:col-span-2 text-right">Status</div>
+                        </div>
+
+                        <!-- Working Sets Rows -->
+                        <div class="space-y-2">
+                          ${ex.sets.map((st, sIdx) => `
+                            <div class="grid grid-cols-12 items-center gap-2 p-2 rounded-xl border transition ${
+                              st.completed ? 'bg-[#12B76A]/10 border-[#12B76A]/30' : 'bg-white border-gray-200'
+                            }">
+                              <div class="col-span-3 sm:col-span-4">
+                                <span class="text-xs font-extrabold text-[#172B4D]">Set ${sIdx + 1}</span>
+                                <span class="block text-[10px] text-[#667085]">${ex.targetReps}</span>
+                              </div>
+                              <div class="col-span-3">
+                                <input type="number" step="0.5" placeholder="${lastWeight || '0'}" value="${st.weight}" onchange="App.updateSetField(${exIdx}, ${sIdx}, 'weight', this.value)" class="ft-input w-full py-2.5 px-2 text-center text-sm" />
+                              </div>
+                              <div class="col-span-3">
+                                <input type="number" placeholder="Reps" value="${st.reps}" onchange="App.updateSetField(${exIdx}, ${sIdx}, 'reps', this.value)" class="ft-input w-full py-2.5 px-2 text-center text-sm" />
+                              </div>
+                              <div class="col-span-3 sm:col-span-2 flex justify-end">
+                                <button onclick="App.toggleSetComplete(${exIdx}, ${sIdx})" class="w-full py-2.5 rounded-xl font-bold text-xs transition ${
+                                  st.completed ? 'bg-[#12B76A] text-white shadow-2xs' : 'bg-[#F5F8FC] border border-gray-300 text-[#172B4D] hover:bg-[#EAF1FF]'
+                                }">
+                                  ${st.completed ? 'Done ✓' : 'Done'}
+                                </button>
+                              </div>
+                            </div>
+                          `).join('')}
+                        </div>
+
+                        <!-- Exercise Notes -->
+                        <div class="pt-1">
+                          <input type="text" placeholder="Add set cues, machine seat pin, or form notes..." value="${ex.notes || ''}" onchange="App.updateExerciseNotes(${exIdx}, this.value)" class="ft-input w-full px-3 py-2 text-xs font-normal" />
+                        </div>
+                      `}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      },
+
+      viewSundayRestScreen(selectedDate, sched) {
+        const weekMon = DateUtils.getMondayOfWeek(selectedDate);
+        const weekSessions = Store.state.sessions.filter(s => s.date >= weekMon && s.date <= selectedDate);
+        const totalSetsWeek = weekSessions.reduce((acc, s) => acc + s.exercises.reduce((a, e) => a + e.sets.filter(st => st.completed).length, 0), 0);
+        const nextMon = DateUtils.addDays(selectedDate, 1);
+        const nextMonSched = Scheduler.getScheduleForDate(nextMon);
+
+        return `
+          <div class="ft-card p-6">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-[#667085]">Sunday Rest Day</span>
+              <span class="text-xs text-[#667085]">${DateUtils.formatDisplay(selectedDate, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+            <h1 class="text-2xl font-extrabold text-[#172B4D]">Recovery & CNS Restoration</h1>
+            <p class="text-sm text-[#667085] mt-1">Muscle hypertrophy happens during recovery. Use today to restore energy for next week's split.</p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-5">
+              <div class="p-4 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-xs font-semibold text-[#667085]">Weekly Workouts Completed</span>
+                <span class="text-2xl font-extrabold text-[#172B4D] block mt-1">${weekSessions.filter(s => s.status === 'completed').length}</span>
+              </div>
+              <div class="p-4 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-xs font-semibold text-[#667085]">Working Sets Logged This Week</span>
+                <span class="text-2xl font-extrabold text-[#155EEF] block mt-1">${totalSetsWeek}</span>
+              </div>
+              <div class="p-4 rounded-xl bg-[#EAF1FF]/60 border border-[#155EEF]/20">
+                <span class="text-xs font-semibold text-[#155EEF]">Next Up (${DateUtils.formatDisplay(nextMon, { weekday: 'short', month: 'short', day: 'numeric' })})</span>
+                <span class="text-lg font-extrabold text-[#172B4D] block mt-1">${nextMonSched.template.name}</span>
+              </div>
+            </div>
+
+            <div class="mt-6 p-4 rounded-xl border border-gray-200">
+              <h3 class="text-sm font-bold text-[#172B4D] mb-2">Optional Light Mobility Routine (15 mins)</h3>
+              <ul class="text-xs text-[#667085] space-y-1.5 list-disc pl-4">
+                <li>Thoracic spine foam rolling & cat-cow flow – 3 mins</li>
+                <li>90/90 hip internal & external rotation switches – 4 mins</li>
+                <li>Doorway pec minor stretch & band pull-aparts – 4 mins</li>
+                <li>Light walking outdoors – 15–20 mins</li>
+              </ul>
+            </div>
+
+            <div class="mt-5 flex flex-wrap gap-3">
+              <button onclick="App.openRecoveryModal('${selectedDate}')" class="px-4 py-2.5 rounded-xl bg-[#155EEF] text-white text-xs font-bold">
+                Log Sunday Recovery Check-In
+              </button>
+              <button onclick="App.openScheduleEditorModal('${selectedDate}')" class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D]">
+                Reschedule a Missed Session Here
+              </button>
+            </div>
+          </div>
+        `;
+      },
+
+      // --- WORKOUT SESSION ACTIONS ---
+      buildExerciseEntry(exId, template = null) {
+        const meta = EXERCISE_DB.find(e => e.id === exId) || EXERCISE_DB[0];
+        const tplOverride = template?.exerciseOverrides?.[exId] || {};
+        const custom = Store.state.customExerciseConfig[exId] || {};
+        const numSets = custom.sets || tplOverride.sets || meta.defaultSets || 3;
+        const targetReps = custom.reps || tplOverride.reps || meta.defaultReps || '8–12';
+        const lastW = this.getLastUsedWeight(exId);
+
+        return {
+          exerciseId: meta.id,
+          name: meta.name,
+          primary: meta.primary,
+          targetReps,
+          expanded: true,
+          skipped: false,
+          skipReason: '',
+          notes: '',
+          warmup: { weight: lastW ? String(Math.max(2.5, Math.round(lastW * 0.5 * 2) / 2)) : '', reps: '12', completed: false },
+          sets: Array.from({ length: numSets }, () => ({
+            weight: lastW ? String(lastW) : '',
+            reps: '',
+            completed: false
+          }))
+        };
+      },
+
+      getLastUsedWeight(exId) {
+        const sorted = [...Store.state.sessions].sort((a, b) => b.date.localeCompare(a.date));
+        for (const s of sorted) {
+          for (const ex of s.exercises) {
+            if (ex.exerciseId === exId) {
+              let best = 0;
+              ex.sets.forEach(st => {
+                const w = parseFloat(st.weight);
+                if (st.completed && !isNaN(w) && w > best) best = w;
+              });
+              if (best > 0) return best;
+            }
+          }
+        }
+        return null;
+      },
+
+      startWorkout(dateKey) {
+        if (Store.state.activeSession) {
+          this.showToast('You already have an active session in progress.', 'warning');
+          this.navigate('workout');
+          return;
+        }
+        const sched = Scheduler.getScheduleForDate(dateKey);
+        if (sched.template.isRest && sched.template.exercises.length === 0) {
+          this.showToast('Today is a scheduled Rest Day. Edit the split if you wish to train.', 'warning');
+          return;
+        }
+
+        // Automatic Attendance Rule: First workout start of a calendar day records 1 gym visit (never duplicated)
+        if (!Store.state.attendance[dateKey]?.attended) {
+          Store.state.attendance[dateKey] = {
+            attended: true,
+            source: 'workout_start',
+            recordedAt: new Date().toISOString()
+          };
+          this.showToast(`Gym attendance automatically recorded for ${DateUtils.formatDisplay(dateKey, { month: 'short', day: 'numeric' })}.`, 'success');
+        }
+
+        Store.state.activeSession = {
+          id: `session_${dateKey}_${Date.now()}`,
+          date: dateKey,
+          templateId: sched.templateId,
+          workoutName: sched.template.name,
+          muscles: sched.template.muscles,
+          startedAt: Date.now(),
+          resumedAt: Date.now(),
+          accumulatedSeconds: 0,
+          paused: false,
+          notes: '',
+          exercises: sched.template.exercises.map(exId => this.buildExerciseEntry(exId, sched.template))
+        };
+
+        Store.state.ui.selectedDate = dateKey;
+        Store.state.ui.currentTab = 'workout';
+        Store.save();
+        this.renderNavigation();
+        this.renderCurrentView();
+      },
+
+      togglePauseActiveWorkout() {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        if (!s.paused) {
+          s.accumulatedSeconds = this.getActiveSessionSeconds(s);
+          s.paused = true;
+        } else {
+          s.resumedAt = Date.now();
+          s.paused = false;
+        }
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      toggleExerciseExpand(exIdx) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        s.exercises[exIdx].expanded = s.exercises[exIdx].expanded === false ? true : false;
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      updateSetField(exIdx, setIdx, field, val) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        if (setIdx === 'warmup') {
+          s.exercises[exIdx].warmup[field] = val;
+        } else {
+          s.exercises[exIdx].sets[setIdx][field] = val;
+        }
+        Store.save();
+      },
+
+      toggleSetComplete(exIdx, setIdx) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        if (setIdx === 'warmup') {
+          s.exercises[exIdx].warmup.completed = !s.exercises[exIdx].warmup.completed;
+        } else {
+          const targetSet = s.exercises[exIdx].sets[setIdx];
+          targetSet.completed = !targetSet.completed;
+          // Auto-fill default reps if left empty when tapping Done for fast gym UX
+          if (targetSet.completed && !targetSet.reps) {
+            const parsedRep = parseInt(s.exercises[exIdx].targetReps, 10);
+            targetSet.reps = !isNaN(parsedRep) ? String(parsedRep) : '10';
+          }
+          // Auto-start rest timer when completing a working set
+          if (targetSet.completed) {
+            this.resetRestTimer();
+            this.toggleRestTimer();
+          }
+        }
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      updateExerciseNotes(exIdx, text) {
+        if (!Store.state.activeSession) return;
+        Store.state.activeSession.exercises[exIdx].notes = text;
+        Store.save();
+      },
+
+      openReplaceExerciseModal(exIdx) {
+        const currentEx = Store.state.activeSession.exercises[exIdx];
+        const alternatives = EXERCISE_DB.filter(e => e.primary === currentEx.primary && e.id !== currentEx.exerciseId);
+        const list = alternatives.length > 0 ? alternatives : EXERCISE_DB.filter(e => e.id !== currentEx.exerciseId);
+
+        this.openModal(`
+          <div class="p-5 overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-bold text-[#172B4D]">Replace ${currentEx.name}</h3>
+                <p class="text-xs text-[#667085]">Original template remains intact; substitution is recorded in session history.</p>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-2 max-h-80 overflow-y-auto pr-1">
+              ${list.map(alt => `
+                <button onclick="App.replaceActiveExercise(${exIdx}, '${alt.id}')" class="w-full p-3 rounded-xl border border-gray-200 hover:border-[#155EEF] text-left flex items-center justify-between transition">
+                  <div>
+                    <p class="text-sm font-bold text-[#172B4D]">${alt.name}</p>
+                    <p class="text-xs text-[#667085]">${alt.primary} • ${alt.equipment} • ${alt.defaultSets}×${alt.defaultReps}</p>
+                  </div>
+                  <span class="text-xs font-bold text-[#155EEF]">Select →</span>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        `);
+      },
+
+      replaceActiveExercise(exIdx, newExId) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        const oldName = s.exercises[exIdx].name;
+        const replacement = this.buildExerciseEntry(newExId);
+        replacement.replacedFrom = oldName;
+        s.exercises[exIdx] = replacement;
+        Store.save();
+        this.closeModal();
+        this.renderCurrentView();
+        this.showToast(`Replaced with ${replacement.name}`, 'success');
+      },
+
+      openSkipExerciseModal(exIdx) {
+        const reasons = ['Equipment occupied', 'Joint discomfort / soreness', 'Time constraint', 'Fatigue management'];
+        this.openModal(`
+          <div class="p-5">
+            <h3 class="text-base font-bold text-[#172B4D] mb-1">Skip Exercise</h3>
+            <p class="text-xs text-[#667085] mb-3">Select or enter a reason so your analytics stay accurate.</p>
+            <div class="space-y-2 mb-3">
+              ${reasons.map(r => `
+                <button onclick="App.confirmSkipExercise(${exIdx}, '${r}')" class="w-full p-2.5 rounded-xl border border-gray-200 hover:border-[#155EEF] text-left text-xs font-semibold text-[#172B4D]">
+                  ${r}
+                </button>
+              `).join('')}
+            </div>
+            <div class="flex gap-2">
+              <input id="custom-skip-reason" type="text" placeholder="Custom reason..." class="ft-input flex-1 px-3 py-2 text-xs" />
+              <button onclick="App.confirmSkipExercise(${exIdx}, document.getElementById('custom-skip-reason').value || 'Skipped')" class="px-4 py-2 rounded-xl bg-[#155EEF] text-white text-xs font-bold">Skip</button>
+            </div>
+          </div>
+        `);
+      },
+
+      confirmSkipExercise(exIdx, reason) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        s.exercises[exIdx].skipped = true;
+        s.exercises[exIdx].skipReason = reason;
+        Store.save();
+        this.closeModal();
+        this.renderCurrentView();
+      },
+
+      unskipExercise(exIdx) {
+        const s = Store.state.activeSession;
+        if (!s) return;
+        s.exercises[exIdx].skipped = false;
+        s.exercises[exIdx].skipReason = '';
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      confirmCancelWorkout() {
+        this.openModal(`
+          <div class="p-5">
+            <h3 class="text-base font-bold text-[#172B4D]">Cancel Workout Session?</h3>
+            <p class="text-xs text-[#667085] mt-1">Unsaved sets in this active session will be discarded. Your gym attendance record for today will remain intact.</p>
+            <div class="flex justify-end gap-2 mt-5">
+              <button onclick="App.closeModal()" class="px-4 py-2 rounded-xl bg-gray-100 text-xs font-bold text-[#172B4D]">Keep Training</button>
+              <button onclick="App.cancelWorkout()" class="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold">Discard Session</button>
+            </div>
+          </div>
+        `);
+      },
+
+      cancelWorkout() {
+        Store.state.activeSession = null;
+        Store.save();
+        this.closeModal();
+        this.renderNavigation();
+        this.renderCurrentView();
+        this.showToast('Active session discarded.', 'warning');
+      },
+
+      finishWorkout() {
+        const s = Store.state.activeSession;
+        if (!s) return;
+
+        const durationSeconds = this.getActiveSessionSeconds(s);
+        const totalSets = s.exercises.reduce((acc, ex) => ex.skipped ? acc : acc + ex.sets.length, 0);
+        const completedSets = s.exercises.reduce((acc, ex) => ex.skipped ? acc : acc + ex.sets.filter(st => st.completed).length, 0);
+        const totalReps = s.exercises.reduce((acc, ex) => ex.skipped ? acc : acc + ex.sets.reduce((rAcc, st) => rAcc + (st.completed ? (parseInt(st.reps, 10) || 0) : 0), 0), 0);
+        const completedExercises = s.exercises.filter(ex => !ex.skipped && ex.sets.every(st => st.completed)).length;
+
+        // Only mark workout 'completed' if all non-skipped exercises are finished; otherwise 'partial'
+        const isFullyCompleted = completedSets > 0 && completedSets === totalSets;
+        const status = isFullyCompleted ? 'completed' : 'partial';
+
+        // Check for Personal Records (Strictly same exerciseId, never cross-comparing variations)
+        const newPRs = [];
+        s.exercises.forEach(ex => {
+          if (ex.skipped) return;
+          ex.sets.forEach(st => {
+            if (!st.completed) return;
+            const w = parseFloat(st.weight);
+            const r = parseInt(st.reps, 10);
+            if (!isNaN(w) && w > 0 && !isNaN(r) && r > 0) {
+              const pr = Store.state.personalRecords[ex.exerciseId];
+              if (!pr || w > pr.maxWeight || (w === pr.maxWeight && r > pr.bestRepsAtMax)) {
+                Store.state.personalRecords[ex.exerciseId] = {
+                  exerciseId: ex.exerciseId,
+                  exerciseName: ex.name,
+                  maxWeight: w,
+                  bestRepsAtMax: r,
+                  date: s.date,
+                  history: [...(pr?.history || []), { date: s.date, weight: w, reps: r }]
+                };
+                if (!newPRs.find(p => p.exerciseId === ex.exerciseId)) {
+                  newPRs.push({ exerciseId: ex.exerciseId, name: ex.name, weight: w, reps: r });
+                }
+              }
+            }
+          });
+        });
+
+        const finalized = {
+          ...s,
+          endedAt: Date.now(),
+          durationSeconds,
+          status
+        };
+
+        // Preserve historical records without overwriting other sessions
+        Store.state.sessions.push(finalized);
+        Store.state.activeSession = null;
+        Store.save();
+
+        this.renderNavigation();
+        this.renderCurrentView();
+
+        // Show Post-Workout Summary Modal
+        this.openModal(`
+          <div class="p-5">
+            <div class="text-center mb-4">
+              <div class="w-12 h-12 rounded-2xl bg-[#12B76A]/15 text-[#12B76A] flex items-center justify-center mx-auto mb-2">
+                <i data-lucide="award" class="w-6 h-6"></i>
+              </div>
+              <h3 class="text-lg font-extrabold text-[#172B4D]">${isFullyCompleted ? 'Workout Completed!' : 'Partial Workout Saved'}</h3>
+              <p class="text-xs text-[#667085]">${finalized.workoutName} • ${DateUtils.formatDisplay(finalized.date)}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+              <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-[11px] text-[#667085] block">Duration</span>
+                <span class="text-base font-extrabold text-[#172B4D]">${this.formatDuration(durationSeconds)}</span>
+              </div>
+              <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-[11px] text-[#667085] block">Exercises Done</span>
+                <span class="text-base font-extrabold text-[#172B4D]">${completedExercises} / ${s.exercises.length}</span>
+              </div>
+              <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-[11px] text-[#667085] block">Sets Completed</span>
+                <span class="text-base font-extrabold text-[#155EEF]">${completedSets} / ${totalSets}</span>
+              </div>
+              <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <span class="text-[11px] text-[#667085] block">Total Repetitions</span>
+                <span class="text-base font-extrabold text-[#172B4D]">${totalReps} reps</span>
+              </div>
+            </div>
+
+            ${newPRs.length > 0 ? `
+              <div class="p-3 rounded-xl bg-[#EAF1FF] border border-[#155EEF]/30 mb-4">
+                <p class="text-xs font-extrabold text-[#155EEF] mb-1">New Personal Records Achieved!</p>
+                ${newPRs.map(p => `<p class="text-xs font-semibold text-[#172B4D]">• ${p.name}: ${p.weight} kg × ${p.reps} reps</p>`).join('')}
+              </div>
+            ` : ''}
+
+            <div class="mb-4">
+              <label class="text-xs font-bold text-[#172B4D] block mb-1">Session Notes</label>
+              <textarea id="summary-session-notes" rows="2" placeholder="How did energy, pump, and strength feel?" class="ft-input w-full p-2.5 text-xs font-normal"></textarea>
+            </div>
+
+            <button onclick="App.saveSummaryNotesAndClose('${finalized.id}')" class="w-full py-3 rounded-xl bg-[#155EEF] text-white font-bold text-sm">
+              Done & Return to Dashboard
+            </button>
+          </div>
+        `);
+      },
+
+      saveSummaryNotesAndClose(sessionId) {
+        const noteEl = document.getElementById('summary-session-notes');
+        if (noteEl && noteEl.value.trim()) {
+          const found = Store.state.sessions.find(s => s.id === sessionId);
+          if (found) found.notes = noteEl.value.trim();
+          Store.save();
+        }
+        this.closeModal();
+        this.navigate('home');
+      },
+
+      // ============================================================================
+      // VIEW 3: FULL MONTHLY GYM CALENDAR
+      // ============================================================================
+      viewCalendar() {
+        const monthStr = Store.state.ui.calendarMonth || DateUtils.toKey(new Date()).slice(0, 7);
+        const [year, month] = monthStr.split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const startOffset = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1; // Mon=0
+        const totalDays = lastDay.getDate();
+
+        const monthLabel = firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+        const selectedDate = Store.state.ui.selectedDate || DateUtils.toKey(new Date());
+        const selectedInfo = Scheduler.getDayStatus(selectedDate);
+        const routine = this.getOrInitDailyRoutine(selectedDate, selectedInfo.sched.template);
+
+        const cells = [];
+        for (let i = 0; i < startOffset; i++) cells.push(null);
+        for (let d = 1; d <= totalDays; d++) {
+          cells.push(DateUtils.toKey(new Date(year, month - 1, d)));
+        }
+
+        return `
+          <div class="ft-card p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <h1 class="text-xl font-extrabold text-[#172B4D]">Gym Attendance & Training Calendar</h1>
+                <p class="text-xs text-[#667085]">Blue = Gym Attendance • Green = Completed • Yellow = Partial • Grey = Rest • Red = Missed</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="App.shiftCalendarMonth(-1)" class="p-2 rounded-xl border border-gray-200 hover:bg-gray-50"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                <span class="text-sm font-bold text-[#172B4D] min-w-[130px] text-center">${monthLabel}</span>
+                <button onclick="App.shiftCalendarMonth(1)" class="p-2 rounded-xl border border-gray-200 hover:bg-gray-50"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+              </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="flex flex-wrap gap-3 text-[11px] font-semibold text-[#667085] mb-3">
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#155EEF]"></span> Attended</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#12B76A]"></span> Completed Workout</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#F79009]"></span> Partial Workout</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#98A2B3]"></span> Rest Day</span>
+              <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#F04438]"></span> Missed Workout</span>
+            </div>
+
+            <!-- Weekday Headers -->
+            <div class="grid grid-cols-7 gap-1.5 text-center text-[11px] font-bold text-[#667085] mb-1.5">
+              <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="grid grid-cols-7 gap-1.5">
+              ${cells.map(dk => {
+                if (!dk) return `<div class="h-16 sm:h-20 rounded-xl bg-gray-50/50"></div>`;
+                const st = Scheduler.getDayStatus(dk);
+                const isSelected = dk === selectedDate;
+                const dayNum = Number(dk.slice(8, 10));
+
+                const statusDot = {
+                  completed: 'bg-[#12B76A]',
+                  in_progress: 'bg-[#155EEF]',
+                  partial: 'bg-[#F79009]',
+                  missed: 'bg-[#F04438]',
+                  rest: 'bg-[#98A2B3]',
+                  today: 'bg-[#155EEF]',
+                  upcoming: 'bg-gray-300'
+                }[st.code];
+
+                return `
+                  <button onclick="App.selectCalendarDate('${dk}')" class="h-16 sm:h-20 p-1.5 sm:p-2 rounded-xl border text-left flex flex-col justify-between transition ${
+                    isSelected ? 'border-[#155EEF] bg-[#EAF1FF]/40 ring-1 ring-[#155EEF]' : 'border-gray-200 bg-white hover:border-[#155EEF]/50'
+                  }">
+                    <div class="flex items-center justify-between w-full">
+                      <span class="text-xs font-extrabold ${st.code === 'today' ? 'text-[#155EEF]' : 'text-[#172B4D]'}">${dayNum}</span>
+                      ${st.attended ? '<span title="Attended Gym" class="w-2 h-2 rounded-full bg-[#155EEF]"></span>' : ''}
+                    </div>
+                    <div>
+                      <span class="text-[10px] font-bold text-[#172B4D] block truncate">${st.sched.template.shortName}</span>
+                      <span class="inline-block w-full h-1 rounded-full mt-1 ${statusDot}"></span>
+                    </div>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+
+          <!-- Selected Day Inspector & Manual Attendance / History Editor -->
+          <div class="ft-card p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3 pb-4 border-b border-gray-100">
+              <div>
+                <span class="text-xs font-bold text-[#155EEF]">${DateUtils.formatDisplay(selectedDate, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</span>
+                <h2 class="text-lg font-extrabold text-[#172B4D] mt-0.5">${selectedInfo.sched.template.name}</h2>
+                <p class="text-xs text-[#667085]">Status: <strong>${selectedInfo.label}</strong> • ${selectedInfo.sched.phase}</p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2">
+                <button onclick="App.toggleManualAttendance('${selectedDate}')" class="px-3.5 py-2 rounded-xl border text-xs font-bold flex items-center gap-1.5 ${
+                  selectedInfo.attended
+                    ? 'bg-[#EAF1FF] border-[#155EEF] text-[#155EEF]'
+                    : 'bg-white border-gray-200 text-[#172B4D] hover:bg-gray-50'
+                }">
+                  <i data-lucide="user-check" class="w-4 h-4"></i>
+                  ${selectedInfo.attended ? 'Attended (Click to Unmark)' : 'Mark Gym Attendance'}
+                </button>
+                <button onclick="App.openScheduleEditorModal('${selectedDate}')" class="px-3.5 py-2 rounded-xl bg-white border border-gray-200 text-xs font-bold text-[#172B4D] hover:bg-gray-50">
+                  Reschedule / Edit Day
+                </button>
+                <button onclick="App.navigate('workout', '${selectedDate}')" class="px-3.5 py-2 rounded-xl bg-[#155EEF] text-white text-xs font-bold">
+                  Open Workout
+                </button>
+              </div>
+            </div>
+
+            ${selectedInfo.session ? `
+              <div class="mt-4 space-y-2">
+                <div class="flex items-center justify-between">
+                  <p class="text-xs font-bold text-[#172B4D]">Recorded Session Exercises</p>
+                  <button onclick="App.editHistoricalSession('${selectedInfo.session.id}')" class="text-xs font-bold text-[#155EEF] hover:underline">Edit Sets & Weights</button>
+                </div>
+                ${selectedInfo.session.exercises.map(ex => `
+                  <div class="p-2.5 rounded-xl bg-[#F5F8FC] flex items-center justify-between text-xs">
+                    <span class="font-bold text-[#172B4D]">${ex.name}</span>
+                    <span class="text-[#667085]">
+                      ${ex.skipped ? `Skipped (${ex.skipReason})` : ex.sets.map(st => `${st.weight || 0}kg×${st.reps || 0}`).join(' | ')}
+                    </span>
+                  </div>
+                `).join('')}
+                ${selectedInfo.session.notes ? `<p class="text-xs text-[#667085] pt-1">Notes: ${selectedInfo.session.notes}</p>` : ''}
+              </div>
+            ` : `
+              <p class="text-xs text-[#667085] mt-4">No workout session recorded on this date yet. Daily routine: Cycling ${routine.cycling.completed ? '✓' : '—'}, Push-ups ${routine.pushups.set1Done && routine.pushups.set2Done ? '✓' : '—'}.</p>
+            `}
+          </div>
+        `;
+      },
+
+      shiftCalendarMonth(delta) {
+        const [y, m] = Store.state.ui.calendarMonth.split('-').map(Number);
+        const d = new Date(y, m - 1 + delta, 1);
+        Store.state.ui.calendarMonth = DateUtils.toKey(d).slice(0, 7);
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      selectCalendarDate(dk) {
+        Store.state.ui.selectedDate = dk;
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      toggleManualAttendance(dateKey) {
+        const current = Boolean(Store.state.attendance[dateKey]?.attended);
+        if (current) {
+          delete Store.state.attendance[dateKey];
+          this.showToast(`Attendance removed for ${DateUtils.formatDisplay(dateKey, { month: 'short', day: 'numeric' })}.`, 'warning');
+        } else {
+          Store.state.attendance[dateKey] = {
+            attended: true,
+            source: 'manual_calendar',
+            recordedAt: new Date().toISOString()
+          };
+          this.showToast(`Gym attendance marked for ${DateUtils.formatDisplay(dateKey, { month: 'short', day: 'numeric' })}.`, 'success');
+        }
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      // ============================================================================
+      // VIEW 4: ANALYTICS DASHBOARD (100% REAL SAVED DATA + CHART.JS)
+      // ============================================================================
+      viewAnalytics() {
+        const att = AnalyticsEngine.getAttendanceMetrics();
+        const wrk = AnalyticsEngine.getWorkoutMetrics();
+        const comp = AnalyticsEngine.getMonthlyComparison();
+        const muscleVol = AnalyticsEngine.getMuscleGroupVolume();
+        const selectedEx = Store.state.ui.analyticsExercise || 'inc_db_press';
+        const selectedRange = Store.state.ui.analyticsRange || '30';
+
+        const keyLifts = [
+          'inc_db_press', 'flat_mach_press', 'flat_db_press', 'lat_pulldown',
+          'chest_supp_row', 'tbar_row', 'hack_squat', 'rdl', 'seated_sh_press'
+        ];
+        const allOptions = [
+          ...keyLifts.map(id => EXERCISE_DB.find(e => e.id === id)).filter(Boolean),
+          ...EXERCISE_DB.filter(e => !keyLifts.includes(e.id))
+        ];
+
+        return `
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h1 class="text-xl font-extrabold text-[#172B4D]">Performance & Strength Analytics</h1>
+              <p class="text-xs text-[#667085]">Computed strictly from your saved gym sessions and attendance records</p>
+            </div>
+            <button onclick="App.navigate('records')" class="px-3.5 py-2 rounded-xl bg-[#EAF1FF] text-[#155EEF] text-xs font-bold self-start">
+              View All Personal Records →
+            </button>
+          </div>
+
+          <!-- E. Monthly Comparison Cards -->
+          <section class="ft-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-bold text-[#172B4D]">Monthly Comparison (${comp.currentLabel} vs ${comp.prevLabel})</h2>
+            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80">
+                <span class="text-[11px] font-semibold text-[#667085]">Gym Visits</span>
+                <div class="flex items-baseline gap-2 mt-1">
+                  <span class="text-xl font-extrabold text-[#172B4D]">${comp.current.visits}</span>
+                  <span class="text-xs font-semibold text-[#667085]">vs ${comp.previous.visits}</span>
+                </div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80">
+                <span class="text-[11px] font-semibold text-[#667085]">Completed Workouts</span>
+                <div class="flex items-baseline gap-2 mt-1">
+                  <span class="text-xl font-extrabold text-[#172B4D]">${comp.current.completed}</span>
+                  <span class="text-xs font-semibold text-[#667085]">vs ${comp.previous.completed}</span>
+                </div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80">
+                <span class="text-[11px] font-semibold text-[#667085]">Avg Duration</span>
+                <div class="flex items-baseline gap-2 mt-1">
+                  <span class="text-xl font-extrabold text-[#172B4D]">${comp.current.avgDurationMin}m</span>
+                  <span class="text-xs font-semibold text-[#667085]">vs ${comp.previous.avgDurationMin}m</span>
+                </div>
+              </div>
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200/80">
+                <span class="text-[11px] font-semibold text-[#667085]">Exercise Completion</span>
+                <div class="flex items-baseline gap-2 mt-1">
+                  <span class="text-xl font-extrabold text-[#155EEF]">${comp.current.completionRate}%</span>
+                  <span class="text-xs font-semibold text-[#667085]">vs ${comp.previous.completionRate}%</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- C. Strength Progression Chart -->
+          <section class="ft-card p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 class="text-sm font-bold text-[#172B4D]">Strength Progression (Top Set Weight)</h2>
+                <p class="text-xs text-[#667085]">Select an exercise and date range to inspect load progression</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <select onchange="App.setAnalyticsFilter('exercise', this.value)" class="ft-input px-3 py-1.5 text-xs">
+                  ${allOptions.map(ex => `<option value="${ex.id}" ${ex.id === selectedEx ? 'selected' : ''}>${ex.name}</option>`).join('')}
+                </select>
+                <select onchange="App.setAnalyticsFilter('range', this.value)" class="ft-input px-3 py-1.5 text-xs">
+                  <option value="30" ${selectedRange === '30' ? 'selected' : ''}>Last 30 Days</option>
+                  <option value="90" ${selectedRange === '90' ? 'selected' : ''}>Last 90 Days</option>
+                  <option value="all" ${selectedRange === 'all' ? 'selected' : ''}>All Time</option>
+                </select>
+              </div>
+            </div>
+            <div class="h-60 w-full relative">
+              <canvas id="chart-strength"></canvas>
+            </div>
+          </section>
+
+          <!-- A & B. Weekly Attendance & Exercise Completion Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <section class="ft-card p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h2 class="text-sm font-bold text-[#172B4D]">Weekly Gym Visits (Last 6 Weeks)</h2>
+                  <p class="text-xs text-[#667085]">Target: 6 visits / week • Monthly rate: ${att.monthlyAttendancePct}%</p>
+                </div>
+              </div>
+              <div class="h-56 w-full relative">
+                <canvas id="chart-attendance"></canvas>
+              </div>
+            </section>
+
+            <section class="ft-card p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h2 class="text-sm font-bold text-[#172B4D]">Planned vs Completed Exercises</h2>
+                  <p class="text-xs text-[#667085]">Overall completion rate: ${wrk.exerciseCompletionPct}%</p>
+                </div>
+              </div>
+              <div class="h-56 w-full relative">
+                <canvas id="chart-completion"></canvas>
+              </div>
+            </section>
+          </div>
+
+          <!-- D. Muscle Group Analytics -->
+          <section class="ft-card p-5">
+            <div class="mb-3">
+              <h2 class="text-sm font-bold text-[#172B4D]">Muscle Group Volume & Frequency</h2>
+              <p class="text-xs text-[#667085]">Completed working sets and training sessions per muscle group</p>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+              ${muscleVol.map(m => `
+                <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200/80 flex items-center justify-between">
+                  <div>
+                    <span class="text-xs font-bold text-[#172B4D] block">${m.muscle}</span>
+                    <span class="text-[11px] text-[#667085]">${m.frequency} ${m.frequency === 1 ? 'session' : 'sessions'}</span>
+                  </div>
+                  <span class="text-sm font-extrabold text-[#155EEF]">${m.workingSets} sets</span>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+        `;
+      },
+
+      setAnalyticsFilter(type, value) {
+        if (type === 'exercise') Store.state.ui.analyticsExercise = value;
+        if (type === 'range') Store.state.ui.analyticsRange = value;
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      mountAnalyticsCharts() {
+        const fontConfig = { family: 'Inter', size: 11 };
+
+        // 1. Strength Progression Chart
+        const strengthCanvas = document.getElementById('chart-strength');
+        if (strengthCanvas) {
+          const pts = AnalyticsEngine.getStrengthHistory(Store.state.ui.analyticsExercise, Store.state.ui.analyticsRange);
+          const labels = pts.length > 0 ? pts.map(p => DateUtils.formatDisplay(p.date, { month: 'short', day: 'numeric' })) : ['No logged sets yet'];
+          const values = pts.length > 0 ? pts.map(p => p.weight) : [0];
+
+          this.charts.strength = new Chart(strengthCanvas, {
+            type: 'line',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Top Weight (kg)',
+                data: values,
+                borderColor: '#155EEF',
+                backgroundColor: 'rgba(21, 94, 239, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: '#155EEF'
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, ticks: { font: fontConfig, color: '#667085' }, grid: { color: '#EAECF0' } },
+                x: { ticks: { font: fontConfig, color: '#667085' }, grid: { display: false } }
+              }
+            }
+          });
+        }
+
+        // 2. Weekly Gym Visits (Last 6 Weeks)
+        const attCanvas = document.getElementById('chart-attendance');
+        if (attCanvas) {
+          const todayKey = DateUtils.toKey(new Date());
+          const thisMon = DateUtils.getMondayOfWeek(todayKey);
+          const weekLabels = [];
+          const weekCounts = [];
+
+          for (let w = 5; w >= 0; w--) {
+            const wMon = DateUtils.addDays(thisMon, -w * 7);
+            weekLabels.push(DateUtils.formatDisplay(wMon, { month: 'short', day: 'numeric' }));
+            let count = 0;
+            for (let d = 0; d < 7; d++) {
+              const dk = DateUtils.addDays(wMon, d);
+              if (Store.state.attendance[dk]?.attended) count++;
+            }
+            weekCounts.push(count);
+          }
+
+          this.charts.attendance = new Chart(attCanvas, {
+            type: 'bar',
+            data: {
+              labels: weekLabels,
+              datasets: [{
+                label: 'Gym Visits',
+                data: weekCounts,
+                backgroundColor: '#155EEF',
+                borderRadius: 6,
+                maxBarThickness: 32
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                y: { beginAtZero: true, max: 7, ticks: { stepSize: 1, font: fontConfig, color: '#667085' }, grid: { color: '#EAECF0' } },
+                x: { ticks: { font: fontConfig, color: '#667085' }, grid: { display: false } }
+              }
+            }
+          });
+        }
+
+        // 3. Planned vs Completed Exercises per Recent Session
+        const compCanvas = document.getElementById('chart-completion');
+        if (compCanvas) {
+          const recentSessions = [...Store.state.sessions].slice(-6);
+          const labels = recentSessions.length > 0
+            ? recentSessions.map(s => DateUtils.formatDisplay(s.date, { month: 'short', day: 'numeric' }))
+            : ['No Sessions'];
+          const planned = recentSessions.length > 0 ? recentSessions.map(s => s.exercises.length) : [0];
+          const completed = recentSessions.length > 0
+            ? recentSessions.map(s => s.exercises.filter(ex => !ex.skipped && ex.sets.every(st => st.completed)).length)
+            : [0];
+
+          this.charts.completion = new Chart(compCanvas, {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [
+                { label: 'Planned', data: planned, backgroundColor: '#D0D5DD', borderRadius: 6, maxBarThickness: 24 },
+                { label: 'Completed', data: completed, backgroundColor: '#12B76A', borderRadius: 6, maxBarThickness: 24 }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { labels: { font: fontConfig, boxWidth: 10 } } },
+              scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 2, font: fontConfig, color: '#667085' }, grid: { color: '#EAECF0' } },
+                x: { ticks: { font: fontConfig, color: '#667085' }, grid: { display: false } }
+              }
+            }
+          });
+        }
+      },
+
+      // ============================================================================
+      // VIEW 5: PROFILE, TOOLS HUB, SETTINGS & LOCAL BACKUP
+      // ============================================================================
+      viewProfile() {
+        const p = Store.state.profile;
+        return `
+          <!-- Profile Header Card -->
+          <div class="ft-card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="w-14 h-14 rounded-2xl bg-[#155EEF] text-white font-extrabold text-xl flex items-center justify-center shadow-sm">
+                ${p.weightKg}kg
+              </div>
+              <div>
+                <h1 class="text-xl font-extrabold text-[#172B4D]">${p.name}</h1>
+                <p class="text-xs text-[#667085]">${p.experience}</p>
+                <div class="flex flex-wrap gap-2 mt-1.5">
+                  <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#EAF1FF] text-[#155EEF]">${p.goal}</span>
+                  <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-gray-100 text-[#172B4D]">${p.split}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Training Tools Navigation Cards (For Mobile & Desktop) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button onclick="App.navigate('library')" class="ft-card p-4 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                <i data-lucide="book-open" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-[#172B4D]">Exercise Library</h3>
+                <p class="text-xs text-[#667085]">Form cues, muscles & targets</p>
+              </div>
+            </button>
+
+            <button onclick="App.navigate('records')" class="ft-card p-4 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                <i data-lucide="trophy" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-[#172B4D]">Personal Records</h3>
+                <p class="text-xs text-[#667085]">All-time best weights & reps</p>
+              </div>
+            </button>
+
+            <button onclick="App.navigate('history')" class="ft-card p-4 text-left hover:border-[#155EEF] transition flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center shrink-0">
+                <i data-lucide="history" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-[#172B4D]">Workout History</h3>
+                <p class="text-xs text-[#667085]">Searchable session logs</p>
+              </div>
+            </button>
+          </div>
+
+          <!-- Settings Form -->
+          <div class="ft-card p-5 space-y-4">
+            <h2 class="text-base font-extrabold text-[#172B4D]">Athlete & Training Settings</h2>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-xs font-bold text-[#172B4D] block mb-1">Display Name</label>
+                <input id="set-name" type="text" value="${p.name}" class="ft-input w-full px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-[#172B4D] block mb-1">Current Body Weight (kg)</label>
+                <input id="set-weight" type="number" step="0.1" value="${p.weightKg}" class="ft-input w-full px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-[#172B4D] block mb-1">Height (cm – Optional)</label>
+                <input id="set-height" type="number" placeholder="Not provided" value="${p.heightCm}" class="ft-input w-full px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label class="text-xs font-bold text-[#172B4D] block mb-1">Default Rest Timer (seconds)</label>
+                <select id="set-rest" class="ft-input w-full px-3 py-2 text-sm">
+                  ${[60, 90, 120, 180].map(sec => `<option value="${sec}" ${p.defaultRestSeconds === sec ? 'selected' : ''}>${sec} seconds</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-2">
+              <label class="flex items-center gap-2 text-xs font-bold text-[#172B4D] cursor-pointer">
+                <input id="set-sound" type="checkbox" ${p.soundEnabled ? 'checked' : ''} class="w-4 h-4 rounded accent-[#155EEF]" />
+                Enable rest timer sound notification
+              </label>
+              <button onclick="App.saveProfileSettings()" class="px-5 py-2.5 rounded-xl bg-[#155EEF] hover:bg-[#2970FF] text-white text-xs font-bold">
+                Save Settings
+              </button>
+            </div>
+          </div>
+
+          <!-- Local Storage Notice & JSON Backup / Restore -->
+          <div class="ft-card p-5 space-y-3">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                <i data-lucide="hard-drive" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-sm font-extrabold text-[#172B4D]">Local Browser Data & Periodic Backups</h2>
+                <p class="text-xs text-[#667085] mt-1">
+                  All workouts, sets, attendance, and personal records are saved locally in this browser's storage. Local browser data does not automatically sync across devices and may be cleared if you wipe browser site data. Export a JSON backup periodically.
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2.5 pt-2">
+              <button onclick="App.exportJSON()" class="px-4 py-2.5 rounded-xl bg-[#EAF1FF] text-[#155EEF] text-xs font-bold flex items-center gap-1.5">
+                <i data-lucide="download" class="w-4 h-4"></i> Export JSON Backup
+              </button>
+              <label class="px-4 py-2.5 rounded-xl bg-white border border-gray-200 text-[#172B4D] text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-gray-50">
+                <i data-lucide="upload" class="w-4 h-4"></i> Import JSON Backup
+                <input type="file" accept=".json" onchange="App.importJSON(event)" class="hidden" />
+              </label>
+              <button onclick="App.confirmResetData()" class="px-4 py-2.5 rounded-xl bg-red-50 text-red-600 text-xs font-bold ml-auto hover:bg-red-100">
+                Reset All Data
+              </button>
+            </div>
+          </div>
+        `;
+      },
+
+      saveProfileSettings() {
+        const p = Store.state.profile;
+        p.name = document.getElementById('set-name').value.trim() || 'Athlete';
+        p.weightKg = parseFloat(document.getElementById('set-weight').value) || 54;
+        p.heightCm = document.getElementById('set-height').value.trim();
+        p.defaultRestSeconds = parseInt(document.getElementById('set-rest').value, 10) || 90;
+        p.soundEnabled = document.getElementById('set-sound').checked;
+        this.setRestPreset(p.defaultRestSeconds);
+        Store.save();
+        this.renderCurrentView();
+        this.showToast('Profile and training preferences saved.', 'success');
+      },
+
+      exportJSON() {
+        const blob = new Blob([JSON.stringify(Store.state, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `fittrack_backup_${DateUtils.toKey(new Date())}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast('FITTRACK JSON backup exported.', 'success');
+      },
+
+      importJSON(event) {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const parsed = JSON.parse(e.target.result);
+            if (!parsed || !parsed.profile || !parsed.scheduleConfig) {
+              throw new Error('Invalid FITTRACK backup schema.');
+            }
+            Store.state = Store.migrate(parsed);
+            Store.save();
+            this.renderCurrentView();
+            this.showToast('Backup restored successfully!', 'success');
+          } catch (err) {
+            this.showToast('Failed to import backup: Invalid JSON file.', 'danger');
+          }
+        };
+        reader.readAsText(file);
+      },
+
+      confirmResetData() {
+        this.openModal(`
+          <div class="p-5">
+            <h3 class="text-base font-bold text-[#172B4D]">Reset All FITTRACK Data?</h3>
+            <p class="text-xs text-[#667085] mt-1">This will erase all logged sessions, attendance, personal records, and settings, resetting back to the initial Phase 1 Transition Week state.</p>
+            <div class="flex justify-end gap-2 mt-5">
+              <button onclick="App.closeModal()" class="px-4 py-2 rounded-xl bg-gray-100 text-xs font-bold text-[#172B4D]">Cancel</button>
+              <button onclick="Store.resetAll(); App.closeModal(); App.navigate('home'); App.showToast('All data reset to defaults.', 'warning');" class="px-4 py-2 rounded-xl bg-red-600 text-white text-xs font-bold">Confirm Reset</button>
+            </div>
+          </div>
+        `);
+      },
+
+      // ============================================================================
+      // VIEW 6: SEARCHABLE EXERCISE LIBRARY
+      // ============================================================================
+      viewLibrary() {
+        const search = (Store.state.ui.librarySearch || '').toLowerCase();
+        const muscleFilter = Store.state.ui.libraryFilterMuscle || 'All';
+        const equipFilter = Store.state.ui.libraryFilterEquip || 'All';
+
+        const muscles = ['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Quadriceps', 'Hamstrings', 'Glutes', 'Calves', 'Forearms', 'Abs'];
+        const equips = ['All', 'Dumbbell', 'Barbell', 'Cable', 'Machine', 'Bodyweight'];
+
+        const filtered = EXERCISE_DB.filter(ex => {
+          const matchSearch = !search || ex.name.toLowerCase().includes(search) || ex.primary.toLowerCase().includes(search);
+          const matchMuscle = muscleFilter === 'All' || ex.primary === muscleFilter;
+          const matchEquip = equipFilter === 'All' || ex.equipment.includes(equipFilter);
+          return matchSearch && matchMuscle && matchEquip;
+        });
+
+        return `
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-xl font-extrabold text-[#172B4D]">Exercise Library (${filtered.length})</h1>
+              <p class="text-xs text-[#667085]">Execution instructions, common form mistakes & target rep ranges</p>
+            </div>
+            <button onclick="App.navigate('profile')" class="text-xs font-bold text-[#155EEF]">← Back</button>
+          </div>
+
+          <div class="ft-card p-4 space-y-3">
+            <input type="text" placeholder="Search exercise by name or muscle..." value="${Store.state.ui.librarySearch || ''}" oninput="App.setLibraryFilter('search', this.value)" class="ft-input w-full px-3.5 py-2.5 text-sm font-normal" />
+            <div class="flex flex-wrap gap-2">
+              <select onchange="App.setLibraryFilter('muscle', this.value)" class="ft-input px-3 py-1.5 text-xs">
+                ${muscles.map(m => `<option value="${m}" ${m === muscleFilter ? 'selected' : ''}>Muscle: ${m}</option>`).join('')}
+              </select>
+              <select onchange="App.setLibraryFilter('equip', this.value)" class="ft-input px-3 py-1.5 text-xs">
+                ${equips.map(eq => `<option value="${eq}" ${eq === equipFilter ? 'selected' : ''}>Equipment: ${eq}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ${filtered.map(ex => `
+              <div onclick="App.openExerciseDetailModal('${ex.id}')" class="ft-card p-4 cursor-pointer hover:border-[#155EEF] transition flex items-start gap-3.5">
+                <div class="w-12 h-12 rounded-xl bg-[#F5F8FC] border border-gray-200 flex items-center justify-center shrink-0">
+                  ${EXERCISE_ILLUSTRATIONS[ex.icon || 'chest']}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-sm font-bold text-[#172B4D] truncate">${ex.name}</h3>
+                    <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-[#EAF1FF] text-[#155EEF] shrink-0">${ex.defaultSets}×${ex.defaultReps}</span>
+                  </div>
+                  <p class="text-xs text-[#667085] mt-0.5">${ex.primary} • ${ex.equipment} • ${ex.difficulty}</p>
+                  <p class="text-xs text-[#172B4D] line-clamp-2 mt-1.5">${ex.instructions}</p>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      },
+
+      setLibraryFilter(key, val) {
+        if (key === 'search') Store.state.ui.librarySearch = val;
+        if (key === 'muscle') Store.state.ui.libraryFilterMuscle = val;
+        if (key === 'equip') Store.state.ui.libraryFilterEquip = val;
+        Store.save();
+        this.renderCurrentView();
+      },
+
+      openExerciseDetailModal(exId) {
+        const ex = EXERCISE_DB.find(e => e.id === exId);
+        if (!ex) return;
+        const custom = Store.state.customExerciseConfig[exId] || {};
+        this.openModal(`
+          <div class="p-5 overflow-y-auto">
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-[#EAF1FF] flex items-center justify-center">
+                  ${EXERCISE_ILLUSTRATIONS[ex.icon || 'chest']}
+                </div>
+                <div>
+                  <h3 class="text-base font-extrabold text-[#172B4D]">${ex.name}</h3>
+                  <p class="text-xs text-[#667085]">${ex.primary} (Secondary: ${ex.secondary})</p>
+                </div>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 mb-4 text-xs font-semibold">
+              <span class="px-2.5 py-1 rounded-lg bg-[#F5F8FC] border border-gray-200">Equipment: ${ex.equipment}</span>
+              <span class="px-2.5 py-1 rounded-lg bg-[#F5F8FC] border border-gray-200">Difficulty: ${ex.difficulty}</span>
+              <span class="px-2.5 py-1 rounded-lg bg-[#EAF1FF] text-[#155EEF]">Target: ${custom.sets || ex.defaultSets} × ${custom.reps || ex.defaultReps}</span>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="p-3.5 rounded-xl bg-[#F5F8FC] border border-gray-200">
+                <p class="font-bold text-[#172B4D] mb-1">Execution Instructions</p>
+                <p class="text-[#667085] leading-relaxed">${ex.instructions}</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-red-50/70 border border-red-200/70">
+                <p class="font-bold text-red-700 mb-1">Common Form Mistakes</p>
+                <p class="text-red-600/90 leading-relaxed">${ex.mistakes}</p>
+              </div>
+
+              <!-- Customize Default Sets & Reps for this Exercise -->
+              <div class="p-3.5 rounded-xl border border-gray-200">
+                <p class="font-bold text-[#172B4D] mb-2">Customize Target Sets & Reps</p>
+                <div class="flex items-center gap-2">
+                  <input id="cust-ex-sets" type="number" min="1" max="8" value="${custom.sets || ex.defaultSets}" class="ft-input w-20 px-2.5 py-1.5 text-center text-xs" />
+                  <span class="text-[#667085]">sets ×</span>
+                  <input id="cust-ex-reps" type="text" value="${custom.reps || ex.defaultReps}" class="ft-input w-28 px-2.5 py-1.5 text-center text-xs" />
+                  <button onclick="App.saveCustomExerciseTarget('${ex.id}')" class="ml-auto px-3 py-1.5 rounded-lg bg-[#155EEF] text-white font-bold">Save</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `);
+      },
+
+      saveCustomExerciseTarget(exId) {
+        const sets = parseInt(document.getElementById('cust-ex-sets').value, 10) || 3;
+        const reps = document.getElementById('cust-ex-reps').value.trim() || '8–12';
+        Store.state.customExerciseConfig[exId] = { sets, reps };
+        Store.save();
+        this.closeModal();
+        this.renderCurrentView();
+        this.showToast('Updated target sets & rep range.', 'success');
+      },
+
+      // ============================================================================
+      // VIEW 7: DEDICATED PERSONAL RECORDS PAGE
+      // ============================================================================
+      viewRecords() {
+        const prs = Object.values(Store.state.personalRecords).sort((a, b) => b.date.localeCompare(a.date));
+        return `
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-xl font-extrabold text-[#172B4D]">Personal Records</h1>
+              <p class="text-xs text-[#667085]">Verified highest weights and reps per individual exercise variation</p>
+            </div>
+            <button onclick="App.navigate('analytics')" class="text-xs font-bold text-[#155EEF]">← Analytics</button>
+          </div>
+
+          ${prs.length === 0 ? `
+            <div class="ft-card p-8 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-[#EAF1FF] text-[#155EEF] flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="trophy" class="w-6 h-6"></i>
+              </div>
+              <h3 class="text-base font-bold text-[#172B4D]">No Personal Records Recorded Yet</h3>
+              <p class="text-xs text-[#667085] max-w-md mx-auto mt-1">Complete your working sets with actual weights and reps during a workout session to automatically track your personal bests.</p>
+            </div>
+          ` : `
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              ${prs.map(pr => `
+                <div class="ft-card p-4">
+                  <div class="flex items-start justify-between">
+                    <div>
+                      <h3 class="text-sm font-extrabold text-[#172B4D]">${pr.exerciseName}</h3>
+                      <p class="text-xs text-[#667085] mt-0.5">Achieved on ${DateUtils.formatDisplay(pr.date, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-lg font-extrabold text-[#155EEF]">${pr.maxWeight} kg</span>
+                      <span class="block text-xs font-semibold text-[#12B76A]">× ${pr.bestRepsAtMax} reps</span>
+                    </div>
+                  </div>
+                  ${pr.history && pr.history.length > 1 ? `
+                    <div class="mt-3 pt-2.5 border-t border-gray-100 flex flex-wrap gap-1.5">
+                      ${pr.history.slice(-4).map(h => `
+                        <span class="px-2 py-0.5 rounded bg-[#F5F8FC] text-[11px] font-medium text-[#667085]">
+                          ${DateUtils.formatDisplay(h.date, { month: 'short', day: 'numeric' })}: ${h.weight}kg×${h.reps}
+                        </span>
+                      `).join('')}
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('')}
+            </div>
+          `}
+        `;
+      },
+
+      // ============================================================================
+      // VIEW 8: SEARCHABLE WORKOUT HISTORY LOG
+      // ============================================================================
+      viewHistory() {
+        const sorted = [...Store.state.sessions].sort((a, b) => b.date.localeCompare(a.date));
+        return `
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-xl font-extrabold text-[#172B4D]">Workout History (${sorted.length})</h1>
+              <p class="text-xs text-[#667085]">Complete log of recorded sessions, weights, reps, and attendance</p>
+            </div>
+            <button onclick="App.navigate('profile')" class="text-xs font-bold text-[#155EEF]">← Back</button>
+          </div>
+
+          <div class="space-y-3">
+            ${sorted.map(s => {
+              const doneSets = s.exercises.reduce((a, e) => a + e.sets.filter(st => st.completed).length, 0);
+              const totalSets = s.exercises.reduce((a, e) => a + e.sets.length, 0);
+              return `
+                <div class="ft-card p-4">
+                  <div class="flex flex-wrap items-start justify-between gap-2 pb-3 border-b border-gray-100">
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-[#155EEF]">${DateUtils.formatDisplay(s.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${s.status === 'completed' ? 'bg-[#12B76A]/15 text-[#12B76A]' : 'bg-amber-100 text-amber-700'}">
+                          ${s.status === 'completed' ? 'Completed' : 'Partial'}
+                        </span>
+                      </div>
+                      <h3 class="text-base font-extrabold text-[#172B4D] mt-0.5">${s.workoutName}</h3>
+                      <p class="text-xs text-[#667085]">Duration: ${Math.round((s.durationSeconds || 0) / 60)} min • Sets: ${doneSets}/${totalSets}</p>
+                    </div>
+                    <button onclick="App.editHistoricalSession('${s.id}')" class="px-3 py-1.5 rounded-xl bg-[#EAF1FF] text-[#155EEF] text-xs font-bold">
+                      Review / Edit
+                    </button>
+                  </div>
+                  <div class="mt-3 space-y-1.5">
+                    ${s.exercises.map(ex => `
+                      <div class="flex items-center justify-between text-xs">
+                        <span class="font-semibold text-[#172B4D]">${ex.name}</span>
+                        <span class="text-[#667085]">
+                          ${ex.skipped ? `Skipped (${ex.skipReason})` : ex.sets.map(st => `${st.weight || '—'}kg×${st.reps || '—'}`).join(', ')}
+                        </span>
+                      </div>
+                    `).join('')}
+                  </div>
+                  ${s.notes ? `<p class="mt-2.5 pt-2 border-t border-gray-100 text-xs text-[#667085]">Notes: ${s.notes}</p>` : ''}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      },
+
+      // ============================================================================
+      // MODALS: SCHEDULE EDITING, MIXED DAY EDITOR, HISTORICAL EDITOR & RECOVERY
+      // ============================================================================
+      openScheduleEditorModal(dateKey) {
+        const currentSched = Scheduler.getScheduleForDate(dateKey);
+        const templateOptions = Object.values(Store.state.templates);
+
+        this.openModal(`
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-bold text-[#172B4D]">Schedule & Missed Workout Manager</h3>
+                <p class="text-xs text-[#667085]">${DateUtils.formatDisplay(dateKey, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <p class="text-xs text-[#667085] mb-3">
+              Assign a specific workout or rest day to this calendar date without altering your recurring weekly PPL structure or historical records.
+            </p>
+            <div class="space-y-2 max-h-72 overflow-y-auto">
+              ${templateOptions.map(t => `
+                <button onclick="App.applyDateOverride('${dateKey}', '${t.id}')" class="w-full p-3 rounded-xl border text-left flex items-center justify-between transition ${
+                  currentSched.templateId === t.id ? 'border-[#155EEF] bg-[#EAF1FF]/40' : 'border-gray-200 hover:border-[#155EEF]'
+                }">
+                  <div>
+                    <span class="text-xs font-extrabold text-[#172B4D] block">${t.name}</span>
+                    <span class="text-[11px] text-[#667085]">${t.muscles}</span>
+                  </div>
+                  ${currentSched.templateId === t.id ? '<span class="text-xs font-bold text-[#155EEF]">Selected</span>' : ''}
+                </button>
+              `).join('')}
+            </div>
+            ${currentSched.isOverride ? `
+              <button onclick="App.clearDateOverride('${dateKey}')" class="w-full mt-3 py-2 rounded-xl bg-gray-100 text-xs font-bold text-[#172B4D]">
+                Restore Default Scheduled Split
+              </button>
+            ` : ''}
+          </div>
+        `);
+      },
+
+      applyDateOverride(dateKey, templateId) {
+        Store.state.scheduleConfig.dateOverrides[dateKey] = templateId;
+        Store.save();
+        this.closeModal();
+        this.renderCurrentView();
+        this.showToast(`Updated ${DateUtils.formatDisplay(dateKey, { month: 'short', day: 'numeric' })} to ${Store.state.templates[templateId].name}.`, 'success');
+      },
+
+      clearDateOverride(dateKey) {
+        delete Store.state.scheduleConfig.dateOverrides[dateKey];
+        Store.save();
+        this.closeModal();
+        this.renderCurrentView();
+        this.showToast('Restored default schedule.', 'success');
+      },
+
+      openMixedDayEditorModal(dateKey) {
+        const sched = Scheduler.getScheduleForDate(dateKey);
+        const tpl = Store.state.templates[sched.templateId];
+        if (!tpl) return;
+
+        this.openModal(`
+          <div class="p-5 overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-bold text-[#172B4D]">Edit ${tpl.name} Exercises</h3>
+                <p class="text-xs text-[#667085]">Customize exercises performed on your Phase 1 transition mixed days</p>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+              ${EXERCISE_DB.map(ex => {
+                const checked = tpl.exercises.includes(ex.id);
+                return `
+                  <label class="flex items-center justify-between p-2.5 rounded-xl border border-gray-200 cursor-pointer hover:bg-[#F5F8FC]">
+                    <div>
+                      <span class="text-xs font-bold text-[#172B4D] block">${ex.name}</span>
+                      <span class="text-[11px] text-[#667085]">${ex.primary} • ${ex.defaultSets}×${ex.defaultReps}</span>
+                    </div>
+                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="App.toggleMixedTemplateExercise('${tpl.id}', '${ex.id}', this.checked)" class="w-4 h-4 rounded accent-[#155EEF]" />
+                  </label>
+                `;
+              }).join('')}
+            </div>
+
+            <button onclick="App.closeModal(); App.renderCurrentView();" class="w-full mt-4 py-2.5 rounded-xl bg-[#155EEF] text-white text-xs font-bold">
+              Done Editing Mixed Workout
+            </button>
+          </div>
+        `);
+      },
+
+      toggleMixedTemplateExercise(templateId, exId, isAdded) {
+        const tpl = Store.state.templates[templateId];
+        if (!tpl) return;
+        if (isAdded && !tpl.exercises.includes(exId)) {
+          tpl.exercises.push(exId);
+        } else if (!isAdded) {
+          tpl.exercises = tpl.exercises.filter(id => id !== exId);
+        }
+        Store.save();
+      },
+
+      editHistoricalSession(sessionId) {
+        const session = Store.state.sessions.find(s => s.id === sessionId);
+        if (!session) return;
+
+        this.openModal(`
+          <div class="p-5 overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-bold text-[#172B4D]">Edit Recorded Session</h3>
+                <p class="text-xs text-[#667085]">${session.workoutName} • ${DateUtils.formatDisplay(session.date)}</p>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              ${session.exercises.map((ex, exIdx) => `
+                <div class="p-3 rounded-xl bg-[#F5F8FC] border border-gray-200 space-y-2">
+                  <p class="text-xs font-extrabold text-[#172B4D]">${ex.name}</p>
+                  ${ex.sets.map((st, sIdx) => `
+                    <div class="grid grid-cols-12 items-center gap-2 text-xs">
+                      <span class="col-span-3 font-semibold text-[#667085]">Set ${sIdx + 1}</span>
+                      <input type="number" step="0.5" placeholder="kg" value="${st.weight}" onchange="App.updateHistoricalSet('${sessionId}', ${exIdx}, ${sIdx}, 'weight', this.value)" class="ft-input col-span-4 py-1.5 px-2 text-center" />
+                      <input type="number" placeholder="reps" value="${st.reps}" onchange="App.updateHistoricalSet('${sessionId}', ${exIdx}, ${sIdx}, 'reps', this.value)" class="ft-input col-span-3 py-1.5 px-2 text-center" />
+                      <input type="checkbox" ${st.completed ? 'checked' : ''} onchange="App.updateHistoricalSet('${sessionId}', ${exIdx}, ${sIdx}, 'completed', this.checked)" class="col-span-2 w-4 h-4 mx-auto accent-[#12B76A]" />
+                    </div>
+                  `).join('')}
+                </div>
+              `).join('')}
+
+              <div>
+                <label class="text-xs font-bold text-[#172B4D] block mb-1">Notes</label>
+                <input type="text" value="${session.notes || ''}" onchange="App.updateHistoricalNotes('${sessionId}', this.value)" class="ft-input w-full px-3 py-2 text-xs font-normal" />
+              </div>
+            </div>
+
+            <button onclick="App.closeModal(); App.renderCurrentView(); App.showToast('Historical record updated.', 'success');" class="w-full mt-4 py-2.5 rounded-xl bg-[#155EEF] text-white text-xs font-bold">
+              Save Changes
+            </button>
+          </div>
+        `);
+      },
+
+      updateHistoricalSet(sessionId, exIdx, setIdx, field, value) {
+        const s = Store.state.sessions.find(sess => sess.id === sessionId);
+        if (!s) return;
+        s.exercises[exIdx].sets[setIdx][field] = value;
+        Store.save();
+      },
+
+      updateHistoricalNotes(sessionId, notes) {
+        const s = Store.state.sessions.find(sess => sess.id === sessionId);
+        if (!s) return;
+        s.notes = notes;
+        Store.save();
+      },
+
+      openRecoveryModal(dateKey) {
+        const existing = Store.state.recoveryLogs[dateKey] || { energy: 4, soreness: 2, sleep: 4, readiness: 4, note: '' };
+        const metrics = [
+          { key: 'energy', label: 'Overall Energy (1=Low, 5=High)' },
+          { key: 'soreness', label: 'Muscle Soreness (1=Fresh, 5=Very Sore)' },
+          { key: 'sleep', label: 'Sleep Quality (1=Poor, 5=Restorative)' },
+          { key: 'readiness', label: 'Workout Readiness (1=Low, 5=Ready)' }
+        ];
+
+        this.openModal(`
+          <div class="p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-base font-bold text-[#172B4D]">Daily Recovery Check-In</h3>
+                <p class="text-xs text-[#667085]">${DateUtils.formatDisplay(dateKey, { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+              </div>
+              <button onclick="App.closeModal()" class="p-1.5 rounded-lg text-[#667085] hover:bg-gray-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+
+            <div class="space-y-3">
+              ${metrics.map(m => `
+                <div>
+                  <label class="text-xs font-bold text-[#172B4D] block mb-1.5">${m.label}</label>
+                  <div class="grid grid-cols-5 gap-1.5">
+                    ${[1, 2, 3, 4, 5].map(num => `
+                      <button type="button" onclick="App.setRecoveryScore('${dateKey}', '${m.key}', ${num})" class="py-2 rounded-xl text-xs font-bold border transition ${
+                        existing[m.key] === num ? 'bg-[#155EEF] border-[#155EEF] text-white' : 'bg-white border-gray-200 text-[#172B4D]'
+                      }">${num}</button>
+                    `).join('')}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+
+            ${(existing.soreness >= 4 || existing.energy <= 2) ? `
+              <div class="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-800">
+                <strong>Gentle Recovery Reminder:</strong> Fatigue or soreness is elevated today. Prioritize thorough warm-ups, skip daily push-ups if chest/shoulders are sore, and never push through sharp joint pain.
+              </div>
+            ` : ''}
+
+            <button onclick="App.closeModal(); App.renderCurrentView(); App.showToast('Recovery check-in saved.', 'success');" class="w-full mt-4 py-2.5 rounded-xl bg-[#155EEF] text-white text-xs font-bold">
+              Save Recovery Check-In
+            </button>
+          </div>
+        `);
+      },
+
+      setRecoveryScore(dateKey, key, val) {
+        if (!Store.state.recoveryLogs[dateKey]) {
+          Store.state.recoveryLogs[dateKey] = { energy: 4, soreness: 2, sleep: 4, readiness: 4, note: '' };
+        }
+        Store.state.recoveryLogs[dateKey][key] = val;
+        Store.save();
+        this.openRecoveryModal(dateKey);
+      },
+
+      // --- MODAL & TOAST UTILITIES ---
+      openModal(innerHTML) {
+        const backdrop = document.getElementById('modal-backdrop');
+        const panel = document.getElementById('modal-panel');
+        panel.innerHTML = innerHTML;
+        backdrop.classList.remove('hidden');
+        lucide.createIcons();
+      },
+
+      closeModal() {
+        const backdrop = document.getElementById('modal-backdrop');
+        backdrop.classList.add('hidden');
+      },
+
+      showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        const colors = {
+          success: 'bg-[#172B4D] text-white border-l-4 border-[#12B76A]',
+          warning: 'bg-[#172B4D] text-white border-l-4 border-amber-400',
+          danger: 'bg-[#172B4D] text-white border-l-4 border-red-500',
+          info: 'bg-[#172B4D] text-white border-l-4 border-[#155EEF]'
+        };
+        toast.className = `pointer-events-auto p-3.5 rounded-xl shadow-lg text-xs font-semibold flex items-center justify-between gap-3 transition-all duration-200 ${colors[type] || colors.info}`;
+        toast.innerHTML = `<span>${message}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 220);
+        }, 3200);
+      }
+    };
+
+    // Close modal when clicking outside panel
+    document.getElementById('modal-backdrop').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-backdrop') App.closeModal();
+    });
+
+    // Boot Application on Window Load
+    window.addEventListener('DOMContentLoaded', () => {
+      App.init();
+    });
+  </script>
+</body>
+</html>
